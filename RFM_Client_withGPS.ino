@@ -5,9 +5,11 @@ Author: Mark Turner
 
 To do: truncate latitude and longitude?
   attach interupt to gps
-  no gps signal message
   save data? to sd card? prob on server end
   timeout/watchdog
+  figure out altitude problem: Check data isn't getting lost in buffer; read faster
+      Transmit location, altitude, SC, date/time in separate transmissions?
+  remove unnecessary GPS transmissions?
 
 /*
   Both the TX and RX ProRF boards will need a wire antenna. We recommend a 3" piece of wire.
@@ -114,10 +116,9 @@ void loop()
     //Send a message to the other radio
     
     //GPSdata.toCharArray(&GPStransmit[0],(GPSdata.length()+1));
-    //
-  
-    snprintf(GPStransmit,maxCharLen, "%d/%d/%d SC:%d lat:%.6f lon:%.6f Sp:%f Alt:%f",
-    gps.date.month(),gps.date.day(),gps.date.year(),gps.satellites.value(),
+    SerialUSB.println(gps.altitude.meters());
+    snprintf(GPStransmit,maxCharLen, "%d/%d/%d %02d:%02d:%02d SC:%d lat:%.6f lon:%.6f Sp:%f Alt:%f",
+    gps.date.month(),gps.date.day(),gps.date.year(),gps.time.hour(),gps.time.minute(),gps.time.second(),gps.satellites.value(),
     gps.location.lat(),
     gps.location.lng(),
     gps.speed.kmph(),gps.altitude.meters());
@@ -155,5 +156,33 @@ void loop()
       SerialUSB.println("No reply, is the receiver running?");
     }
     delay(500);
-  }
+  }/*
+  else {
+    SerialUSB.print("Sending message: ");
+    uint8_t toSend[] = "Waiting for GPS";
+    rf95.send( toSend, sizeof(toSend));
+    rf95.waitPacketSent();
+
+    // Now wait for a reply
+    byte buf[RH_RF95_MAX_MESSAGE_LEN];
+    byte len = sizeof(buf);
+
+    if (rf95.waitAvailableTimeout(2000)) {
+      // Should be a reply message for us now
+      if (rf95.recv(buf, &len)) {
+        SerialUSB.print("Got reply: ");
+        SerialUSB.println((char*)buf);
+        //SerialUSB.print(" RSSI: ");
+        //SerialUSB.print(rf95.lastRssi(), DEC);
+      }
+      else {
+        SerialUSB.println("Receive failed");
+      }
+    }
+    else {
+      SerialUSB.println("No reply, is the receiver running?");
+    }
+    delay(500);
+
+  }*/
 }

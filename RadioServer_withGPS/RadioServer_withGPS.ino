@@ -70,12 +70,21 @@ void loop()
       SerialUSB.println();
 
       // Send a reply
-      uint8_t toSend[] = "Data Recieved"; 
-      rf95.send(toSend, sizeof(toSend));
-      rf95.waitPacketSent();
-      SerialUSB.println("Sent a reply");
-      digitalWrite(LED, LOW); //Turn off status LED
-
+      String BUF = (char*)buf;
+      if (BUF.equals("Waiting for GPS")) {
+        uint8_t toSend[] = "Ack Waiting for GPS"; 
+        rf95.send(toSend, sizeof(toSend));
+        rf95.waitPacketSent();
+        SerialUSB.println("Sent a reply");
+        digitalWrite(LED, LOW); //Turn off status LED
+      }
+      else{
+        uint8_t toSend[] = "Data Recieved"; 
+        rf95.send(toSend, sizeof(toSend));
+        rf95.waitPacketSent();
+        SerialUSB.println("Sent a reply");
+        digitalWrite(LED, LOW); //Turn off status LED
+      }
     }
     else
       SerialUSB.println("Recieve failed");
