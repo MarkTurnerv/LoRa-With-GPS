@@ -10,6 +10,9 @@ To do: truncate latitude and longitude?
   figure out altitude problem: Check data isn't getting lost in buffer; read faster
       Transmit location, altitude, SC, date/time in separate transmissions?
   remove unnecessary GPS transmissions?
+  comment code
+
+  WORKING ON LINE 179: setting different messages if timeout and only part of gps string updated
 
 /*
   Both the TX and RX ProRF boards will need a wire antenna. We recommend a 3" piece of wire.
@@ -44,6 +47,10 @@ byte sendLen;
 const int maxCharLen = 150;
 char GPStransmit[150];
 TinyGPSPlus gps;
+bool locUpd=0;
+bool altUpd = 0;
+bool satCntUpd = 0;
+int timeout=0;
 
 void setup()
 {
@@ -53,7 +60,7 @@ void setup()
   Serial1.begin(9600);
   // It may be difficult to read serial messages on startup. The following line
   // will wait for serial to be ready before continuing. Comment out if not needed.
-  while(!SerialUSB); 
+  //while(!SerialUSB); 
   SerialUSB.println("RFM Client!"); 
 
   //Initialize the Radio.
@@ -92,6 +99,19 @@ void loop()
     gps.encode(Serial1.read());
   }
   if(gps.location.isUpdated()) {
+    locUpd = 1;
+  }
+  if(gps.altitude.isUpdated()) {
+    altUpd = 1;
+  }
+  if(gps.satellites.isUpdated()) {
+    satCntUpd = 1;
+  }
+  if(locUpd && altUpd && satCntUpd){
+    locUpd = 0;
+    altUpd = 0;
+    satCntUpd = 0;
+    timeout = millis();
     /*
     GPSdata += gps.date.month();
     GPSdata += "/";
@@ -155,9 +175,11 @@ void loop()
     else {
       SerialUSB.println("No reply, is the receiver running?");
     }
-    delay(500);
-  }/*
+  }
   else {
+    if(millis() - timeout > 10000){
+      if(locUpd && )
+    }
     SerialUSB.print("Sending message: ");
     uint8_t toSend[] = "Waiting for GPS";
     rf95.send( toSend, sizeof(toSend));
@@ -184,5 +206,5 @@ void loop()
     }
     delay(500);
 
-  }*/
+  }
 }

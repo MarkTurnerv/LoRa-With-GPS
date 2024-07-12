@@ -27,7 +27,7 @@ void setup()
   SerialUSB.begin(9600);
   // It may be difficult to read serial messages on startup. The following
   // line will wait for serial to be ready before continuing. Comment out if not needed.
-  while(!SerialUSB);
+  //while(!SerialUSB);
   SerialUSB.println("RFM Server!");
 
   //Initialize the Radio. 
