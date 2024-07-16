@@ -107,7 +107,17 @@ void loop()
   if(gps.satellites.isUpdated()) {
     satCntUpd = 1;
   }
-  if(locUpd && altUpd && satCntUpd){
+  if(locUpd || altUpd || satCntUpd){
+    if (locUpd) {
+      SerialUSB.println("Location updated: ");
+    }
+    if (altUpd) {
+      SerialUSB.println("Altitude updated: ");
+    }
+    if (satCntUpd) {
+      SerialUSB.println("Sat count updated: ");
+    }
+    
     locUpd = 0;
     altUpd = 0;
     satCntUpd = 0;
@@ -177,9 +187,20 @@ void loop()
     }
   }
   else {
-    if(millis() - timeout > 10000){
-      if(locUpd && )
-    }
+    /*if(millis() - timeout > 10000){
+      if(!locUpd) {
+        uint8_t toSend[] = "Location not Updated";
+        rf95.send( toSend, sizeof(toSend));
+      }
+      if(!altUpd) {
+        uint8_t toSend[] = "Altitude not Updated";
+        rf95.send( toSend, sizeof(toSend));
+      }
+      if(!satCntUpd) {
+        uint8_t toSend[] = "Satellite Count not Updated";
+        rf95.send( toSend, sizeof(toSend));
+      }
+    }*/
     SerialUSB.print("Sending message: ");
     uint8_t toSend[] = "Waiting for GPS";
     rf95.send( toSend, sizeof(toSend));
