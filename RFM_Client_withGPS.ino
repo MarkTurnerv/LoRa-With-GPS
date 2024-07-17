@@ -51,6 +51,7 @@ bool locUpd=0;
 bool altUpd = 0;
 bool satCntUpd = 0;
 int timeout=0;
+int GPSreceivingTimeout = 0;
 //uint8_t toSend[] = "Init Val";
 
 void setup()
@@ -88,9 +89,9 @@ void setup()
    rf95.setTxPower(14, false);
 
    //send header
-   uint8_t toSend[] = "Date, Time, SatelliteCount, Latitude, Longitude, Speed (kmph), Altitude (m)";
+   uint8_t initSend[] = "Date, Time, SatelliteCount, Latitude, Longitude, Speed (kmph), Altitude (m)";
   //sprintf(toSend, "Hi, my counter is: %d", packetCounter++);
-  rf95.send(toSend, sizeof(toSend));
+  rf95.send(initSend, sizeof(initSend));
 }
 
 
@@ -112,6 +113,7 @@ void loop()
         altUpd = 0;
         satCntUpd = 0;
         timeout = millis();
+        GPSreceivingTimeout = millis();
         
         //Send a message to the other radio
         snprintf(GPStransmit,maxCharLen, "%d/%d/%d %02d:%02d:%02d SC:%d lat:%.6f lon:%.6f Sp:%.5f Alt:%.1f",
@@ -153,7 +155,9 @@ void loop()
         }*/
       }
       else {
-        if(millis() - timeout > 10000){
+        if(millis() - timeout > 5000){
+          timeout = millis();
+          GPSreceivingTimeout = millis();
           const char *timeoutSend;
           bool TimeoutMessage;
           if(!satCntUpd) {
@@ -180,10 +184,13 @@ void loop()
       }
     }
   }
+  
   else {
-      uint8_t toSend[] = "Waiting for GPS";
+    if (millis()-GPSreceivingTimeout > 8000) {    //if GPS has not received a signal in 5 seconds
+      GPSreceivingTimeout = millis();
       SerialUSB.print("Sending wait message: ");
-      rf95.send(toSend, sizeof(toSend));
+      uint8_t waitMessageSend[] = "Waiting for GPS";
+      rf95.send(waitMessageSend, sizeof(waitMessageSend));
       rf95.waitPacketSent();
 
       // Now wait for a reply
@@ -197,6 +204,7 @@ void loop()
           SerialUSB.println((char*)buf);
           //SerialUSB.print(" RSSI: ");
           //SerialUSB.print(rf95.lastRssi(), DEC);
+          //while(!Serial1.available()){}
         }
         else {
           SerialUSB.println("Receive failed");
@@ -205,6 +213,6 @@ void loop()
       else {
         SerialUSB.println("No reply, is the receiver running?");
       }
-      delay(500);
+    }
   }
 }
