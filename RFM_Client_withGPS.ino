@@ -156,32 +156,34 @@ void loop()
         }*/
       }
       else {
-        if(millis() - timeout > 5000){
-          timeout = millis();
-          GPSreceivingTimeout = millis();
-          const char *timeoutSend;
-          bool TimeoutMessage;
-          if(!satCntUpd) {
-            timeoutSend = "Satellite Count not updated";
-            TimeoutMessage = 1;
-          }
-          if(!altUpd) {
-            timeoutSend = "GPS Altitude not updated";
-            TimeoutMessage = 1;
-          }
-          if(!locUpd) {
-            timeoutSend = "GPS Location not updated";
-            TimeoutMessage = 1;
-          }
-          else {
-            timeoutSend = "System Timeout";
-            TimeoutMessage = 1;
-          }
-          if (TimeoutMessage) {
-            uint8_t timeoutSenduint = (uint8_t *) timeoutSend;
-            SerialUSB.println(timeoutSenduint);
-            rf95.send((uint8_t *) timeoutSend, sizeof(timeoutSend));
-            rf95.waitPacketSent();
+        if(locUpd || altUpd || satCntUpd) {
+          if(millis() - timeout > 5000){
+            timeout = millis();
+            GPSreceivingTimeout = millis();
+            const char *timeoutSend;
+            bool TimeoutMessage;
+            if(!satCntUpd) {
+              timeoutSend = "Satellite Count not updated";
+              TimeoutMessage = 1;
+            }
+            if(!altUpd) {
+              timeoutSend = "GPS Altitude not updated";
+              TimeoutMessage = 1;
+            }
+            if(!locUpd) {
+              timeoutSend = "GPS Location not updated";
+              TimeoutMessage = 1;
+            }
+            else {
+              timeoutSend = "System Timeout";
+              TimeoutMessage = 1;
+            }
+            if (TimeoutMessage) {
+              //uint8_t timeoutSenduint = (uint8_t *) timeoutSend;
+              SerialUSB.println(timeoutSend);
+              rf95.send((uint8_t *) timeoutSend, sizeof(timeoutSend));
+              rf95.waitPacketSent();
+            }
           }
         }
       }
