@@ -1,5 +1,3 @@
-//Add SD card save?
-
 #include <SPI.h>
 
 //Radio Head Library: 

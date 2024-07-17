@@ -51,6 +51,7 @@ bool locUpd=0;
 bool altUpd = 0;
 bool satCntUpd = 0;
 int timeout=0;
+//uint8_t toSend[] = "Init Val";
 
 void setup()
 {
@@ -96,115 +97,114 @@ void setup()
 void loop()
 {
   if(Serial1.available()) {
-    gps.encode(Serial1.read());
-  }
-  if(gps.location.isUpdated()) {
-    locUpd = 1;
-  }
-  if(gps.altitude.isUpdated()) {
-    altUpd = 1;
-  }
-  if(gps.satellites.isUpdated()) {
-    satCntUpd = 1;
-  }
-  if(locUpd && altUpd && satCntUpd){
-    locUpd = 0;
-    altUpd = 0;
-    satCntUpd = 0;
-    timeout = millis();
-    /*
-    GPSdata += gps.date.month();
-    GPSdata += "/";
-    GPSdata += gps.date.day();
-    GPSdata += "/";
-    GPSdata += gps.date.year();
-    GPSdata += ", ";
-    GPSdata += gps.satellites.value();
-    GPSdata += ", ";
-    GPSdata += gps.location.lat();
-    SerialUSB.print("Longitude: ");
-    SerialUSB.println(gps.location.lng(), 6);
-    SerialUSB.print("Speed (kmph): ");
-    SerialUSB.println(gps.speed.kmph());
-    SerialUSB.print("Altitude (meters): ");
-    SerialUSB.println(gps.altitude.meters());
-    */
-  
-    //SerialUSB.println(GPSdata);
-    //SerialUSB.println(GPSdata.length());
-    
-    //Send a message to the other radio
-    
-    //GPSdata.toCharArray(&GPStransmit[0],(GPSdata.length()+1));
-    SerialUSB.println(gps.altitude.meters());
-    snprintf(GPStransmit,maxCharLen, "%d/%d/%d %02d:%02d:%02d SC:%d lat:%.6f lon:%.6f Sp:%f Alt:%f",
-    gps.date.month(),gps.date.day(),gps.date.year(),gps.time.hour(),gps.time.minute(),gps.time.second(),gps.satellites.value(),
-    gps.location.lat(),
-    gps.location.lng(),
-    gps.speed.kmph(),gps.altitude.meters());
-    SerialUSB.print("Sending message: ");
-    //SerialUSB.println(*GPStransmit);
-    SerialUSB.println(GPStransmit);
-    //uint8_t toSend[] = {*GPStransmit};
-    sendLen = strlen(GPStransmit);
-    //sprintf(toSend, "Hi, my counter is: %d", packetCounter++);
-    //rf95.send((uint8_t *) toSend, sizeof(toSend));
-    rf95.send((uint8_t *) GPStransmit, sendLen);
-    
-    GPSdata = "";
-    //GPStransmit[0] = { 0 };
-    memset(GPStransmit, 0, sendLen);
-    rf95.waitPacketSent();
+    if(gps.encode(Serial1.read())) {
+      if(gps.location.isUpdated()) {
+        locUpd = 1;
+      }
+      if(gps.altitude.isUpdated()) {
+        altUpd = 1;
+      }
+      if(gps.satellites.isUpdated()) {
+        satCntUpd = 1;
+      }
+      if(locUpd && altUpd && satCntUpd){
+        locUpd = 0;
+        altUpd = 0;
+        satCntUpd = 0;
+        timeout = millis();
+        
+        //Send a message to the other radio
+        snprintf(GPStransmit,maxCharLen, "%d/%d/%d %02d:%02d:%02d SC:%d lat:%.6f lon:%.6f Sp:%.5f Alt:%.1f",
+        gps.date.month(),gps.date.day(),gps.date.year(),gps.time.hour(),gps.time.minute(),gps.time.second(),gps.satellites.value(),
+        gps.location.lat(),
+        gps.location.lng(),
+        gps.speed.kmph(),gps.altitude.meters());
+        SerialUSB.print("Sending message: ");
+        SerialUSB.println(GPStransmit);
+        sendLen = strlen(GPStransmit);
+        //sprintf(toSend, "Hi, my counter is: %d", packetCounter++);
+        //rf95.send((uint8_t *) toSend, sizeof(toSend));
+        rf95.send((uint8_t *) GPStransmit, sendLen);
+        
+        GPSdata = "";
+        //GPStransmit[0] = { 0 };
+        memset(GPStransmit, 0, sendLen);
+        rf95.waitPacketSent();
 
-    // Now wait for a reply
-    byte buf[RH_RF95_MAX_MESSAGE_LEN];
-    byte len = sizeof(buf);
+        // Now wait for a reply 
+        /*
+        byte buf[RH_RF95_MAX_MESSAGE_LEN];
+        byte len = sizeof(buf);
 
-    if (rf95.waitAvailableTimeout(2000)) {
-      // Should be a reply message for us now
-      if (rf95.recv(buf, &len)) {
-        SerialUSB.print("Got reply: ");
-        SerialUSB.println((char*)buf);
-        //SerialUSB.print(" RSSI: ");
-        //SerialUSB.print(rf95.lastRssi(), DEC);
+        if (rf95.waitAvailableTimeout(2000)) {
+          // Should be a reply message for us now
+          if (rf95.recv(buf, &len)) {
+            SerialUSB.print("Got reply: ");
+            SerialUSB.println((char*)buf);
+            //SerialUSB.print(" RSSI: ");
+            //SerialUSB.print(rf95.lastRssi(), DEC);
+          }
+          else {
+            SerialUSB.println("Receive failed");
+          }
+        }
+        else {
+          SerialUSB.println("No reply, is the receiver running?");
+        }*/
       }
       else {
-        SerialUSB.println("Receive failed");
+        if(millis() - timeout > 10000){
+          const char *timeoutSend;
+          bool TimeoutMessage;
+          if(!satCntUpd) {
+            timeoutSend = "Satellite Count not updated";
+            TimeoutMessage = 1;
+          }
+          if(!altUpd) {
+            timeoutSend = "GPS Altitude not updated";
+            TimeoutMessage = 1;
+          }
+          if(!locUpd) {
+            timeoutSend = "GPS Location not updated";
+            TimeoutMessage = 1;
+          }
+          else {
+            timeoutSend = "System Timeout";
+            TimeoutMessage = 1;
+          }
+          if (TimeoutMessage) {
+            rf95.send((uint8_t *) timeoutSend, sizeof(timeoutSend));
+            rf95.waitPacketSent();
+          }
+        }
       }
-    }
-    else {
-      SerialUSB.println("No reply, is the receiver running?");
     }
   }
   else {
-    if(millis() - timeout > 10000){
-      if(locUpd && )
-    }
-    SerialUSB.print("Sending message: ");
-    uint8_t toSend[] = "Waiting for GPS";
-    rf95.send( toSend, sizeof(toSend));
-    rf95.waitPacketSent();
+      uint8_t toSend[] = "Waiting for GPS";
+      SerialUSB.print("Sending wait message: ");
+      rf95.send(toSend, sizeof(toSend));
+      rf95.waitPacketSent();
 
-    // Now wait for a reply
-    byte buf[RH_RF95_MAX_MESSAGE_LEN];
-    byte len = sizeof(buf);
+      // Now wait for a reply
+      byte buf[RH_RF95_MAX_MESSAGE_LEN];
+      byte len = sizeof(buf);
 
-    if (rf95.waitAvailableTimeout(2000)) {
-      // Should be a reply message for us now
-      if (rf95.recv(buf, &len)) {
-        SerialUSB.print("Got reply: ");
-        SerialUSB.println((char*)buf);
-        //SerialUSB.print(" RSSI: ");
-        //SerialUSB.print(rf95.lastRssi(), DEC);
+      if (rf95.waitAvailableTimeout(2000)) {
+        // Should be a reply message for us now
+        if (rf95.recv(buf, &len)) {
+          SerialUSB.print("Got reply: ");
+          SerialUSB.println((char*)buf);
+          //SerialUSB.print(" RSSI: ");
+          //SerialUSB.print(rf95.lastRssi(), DEC);
+        }
+        else {
+          SerialUSB.println("Receive failed");
+        }
       }
       else {
-        SerialUSB.println("Receive failed");
+        SerialUSB.println("No reply, is the receiver running?");
       }
-    }
-    else {
-      SerialUSB.println("No reply, is the receiver running?");
-    }
-    delay(500);
-
+      delay(500);
   }
 }
