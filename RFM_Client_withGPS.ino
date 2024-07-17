@@ -91,6 +91,7 @@ void setup()
    //send header
    uint8_t initSend[] = "Date, Time, SatelliteCount, Latitude, Longitude, Speed (kmph), Altitude (m)";
   //sprintf(toSend, "Hi, my counter is: %d", packetCounter++);
+  SerialUSB.print("Sending Initial Message: ");
   rf95.send(initSend, sizeof(initSend));
 }
 
@@ -177,6 +178,8 @@ void loop()
             TimeoutMessage = 1;
           }
           if (TimeoutMessage) {
+            uint8_t timeoutSenduint = (uint8_t *) timeoutSend;
+            SerialUSB.println(timeoutSenduint);
             rf95.send((uint8_t *) timeoutSend, sizeof(timeoutSend));
             rf95.waitPacketSent();
           }
