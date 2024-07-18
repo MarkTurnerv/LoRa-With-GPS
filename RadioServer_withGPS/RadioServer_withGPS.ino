@@ -73,14 +73,21 @@ void loop()
         uint8_t toSend[] = "Ack Waiting for GPS"; 
         rf95.send(toSend, sizeof(toSend));
         rf95.waitPacketSent();
-        SerialUSB.println("Sent a reply");
+        //SerialUSB.println("Sent a reply");
+        digitalWrite(LED, LOW); //Turn off status LED
+      }
+      if (BUF.equals("Satellite Count not updated") || BUF.equals("GPS Altitude not updated") || BUF.equals("GPS Location not updated") || BUF.equals("System Timeout")) {
+        uint8_t toSend[] = "Ack Partial Packet Update"; 
+        rf95.send(toSend, sizeof(toSend));
+        rf95.waitPacketSent();
+        //SerialUSB.println("Sent a reply");
         digitalWrite(LED, LOW); //Turn off status LED
       }
       else{
         uint8_t toSend[] = "Data Recieved"; 
         rf95.send(toSend, sizeof(toSend));
         rf95.waitPacketSent();
-        SerialUSB.println("Sent a reply");
+        //SerialUSB.println("Sent a reply");
         digitalWrite(LED, LOW); //Turn off status LED
       }
     }

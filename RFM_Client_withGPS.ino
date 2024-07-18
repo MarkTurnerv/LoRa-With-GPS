@@ -2,23 +2,18 @@
 LoRa GPS transmitter
 Created: 7/10/2024
 Author: Mark Turner
+Based off example from SparkFun:
+https://learn.sparkfun.com/tutorials/sparkfun-samd21-pro-rf-hookup-guide/point-to-point-radio-arduino-examples
+Which is in turn based off rf95 examples from PaulStoffregen RadioHead
+  -rf95_client
+  -rf95_server
+https://github.com/PaulStoffregen/RadioHead/tree/master/examples/rf95
 
-To do: truncate latitude and longitude?
-  attach interupt to gps
-  save data? to sd card? prob on server end
-  timeout/watchdog
-  figure out altitude problem: Check data isn't getting lost in buffer; read faster
-      Transmit location, altitude, SC, date/time in separate transmissions?
+To do:
   remove unnecessary GPS transmissions?
-  comment code
+  test different transmitter powers
 
-  WORKING ON LINE 179: setting different messages if timeout and only part of gps string updated
-
-/*
   Both the TX and RX ProRF boards will need a wire antenna. We recommend a 3" piece of wire.
-  This example is a modified version of the example provided by the Radio Head
-  Library which can be found here:
-  www.github.com/PaulStoffregen/RadioHeadd
 */
 
 #include <SPI.h>
@@ -33,8 +28,8 @@ RH_RF95 rf95(12, 6);
 
 int LED = 13; //Status LED is on pin 13
 
-int packetCounter = 0; //Counts the number of packets sent
-long timeSinceLastPacket = 0; //Tracks the time stamp of last packet received
+//int packetCounter = 0; //Counts the number of packets sent
+//long timeSinceLastPacket = 0; //Tracks the time stamp of last packet received
 
 // The broadcast frequency is set to 921.2, but the SADM21 ProRf operates
 // anywhere in the range of 902-928MHz in the Americas.
@@ -42,17 +37,15 @@ long timeSinceLastPacket = 0; //Tracks the time stamp of last packet received
 // This works but it is unknown how well the radio configures to this frequency:
 //float frequency = 864.1; 
 float frequency = 921.2; //Broadcast frequency
-String GPSdata;
-byte sendLen;
-const int maxCharLen = 150;
-char GPStransmit[150];
-TinyGPSPlus gps;
-bool locUpd=0;
+byte sendLen;   //length of the GPS message to be sent
+const int maxCharLen = 150; //amount of memory allocated to fit GPS data
+char GPStransmit[150];    //variable to contain the GPS data to be send over LoRa
+TinyGPSPlus gps;    //instance of TinyGPSPlus
+bool locUpd=0;    //booleans to check whether the location, altitude, and number of available satellites has been updated
 bool altUpd = 0;
 bool satCntUpd = 0;
-int timeout=0;
-int GPSreceivingTimeout = 0;
-//uint8_t toSend[] = "Init Val";
+int timeout=0;    //timeout check for if only part of satellite data is updated within 5 seconds
+int GPSreceivingTimeout = 0;    //timeout check for if no satellite data is updated within 8 seconds
 
 void setup()
 {
@@ -86,12 +79,12 @@ void setup()
    // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then 
    // you can set transmitter powers from 5 to 23 dBm:
    // Transmitter power can range from 14-20dbm.
-   rf95.setTxPower(14, false);
+   rf95.setTxPower(23, false);
 
-   //send header
+   //send header (can be saved on receiving end using GPSfileSaver.py)
    uint8_t initSend[] = "Date, Time, SatelliteCount, Latitude, Longitude, Speed (kmph), Altitude (m)";
   //sprintf(toSend, "Hi, my counter is: %d", packetCounter++);
-  SerialUSB.print("Sending Initial Message: ");
+  SerialUSB.println("Sending Initial Message: ");
   rf95.send(initSend, sizeof(initSend));
 }
 
@@ -100,16 +93,16 @@ void loop()
 {
   if(Serial1.available()) {
     if(gps.encode(Serial1.read())) {
-      if(gps.location.isUpdated()) {
+      if(gps.location.isUpdated()) {  //check if location data has been updated since last loop
         locUpd = 1;
       }
-      if(gps.altitude.isUpdated()) {
+      if(gps.altitude.isUpdated()) {  //check if altitude data has been updated since last loop
         altUpd = 1;
       }
-      if(gps.satellites.isUpdated()) {
+      if(gps.satellites.isUpdated()) {  //check if number of available satellites has been updated since last loop
         satCntUpd = 1;
       }
-      if(locUpd && altUpd && satCntUpd){
+      if(locUpd && altUpd){
         locUpd = 0;
         altUpd = 0;
         satCntUpd = 0;
@@ -129,13 +122,12 @@ void loop()
         //rf95.send((uint8_t *) toSend, sizeof(toSend));
         rf95.send((uint8_t *) GPStransmit, sendLen);
         
-        GPSdata = "";
         //GPStransmit[0] = { 0 };
         memset(GPStransmit, 0, sendLen);
         rf95.waitPacketSent();
 
         // Now wait for a reply 
-        /*
+        /*  commented out waiting for reply so the transmitter continuously sends GPS data regardless of whether it is recieved
         byte buf[RH_RF95_MAX_MESSAGE_LEN];
         byte len = sizeof(buf);
 
@@ -156,8 +148,8 @@ void loop()
         }*/
       }
       else {
-        if(locUpd || altUpd || satCntUpd) {
-          if(millis() - timeout > 5000){
+        if(locUpd || altUpd) {  //error message if either the location or altitude has been updated but the other has not
+          if(millis() - timeout > 5000){  //if last complete update was longer than 5 seconds ago
             timeout = millis();
             GPSreceivingTimeout = millis();
             const char *timeoutSend;
@@ -174,14 +166,23 @@ void loop()
               timeoutSend = "GPS Location not updated";
               TimeoutMessage = 1;
             }
-            else {
+            else {  //this case should never be called
               timeoutSend = "System Timeout";
               TimeoutMessage = 1;
             }
-            if (TimeoutMessage) {
-              //uint8_t timeoutSenduint = (uint8_t *) timeoutSend;
-              SerialUSB.println(timeoutSend);
-              rf95.send((uint8_t *) timeoutSend, sizeof(timeoutSend));
+            if (TimeoutMessage) { //send warning of what did not update
+              rf95.send((uint8_t *) timeoutSend, strlen(timeoutSend)+1);  //add one to message char length to include terminating character 0
+              rf95.waitPacketSent();
+              delay(250);
+              //send GPS data
+              snprintf(GPStransmit,maxCharLen, "%d/%d/%d %02d:%02d:%02d SC:%d lat:%.6f lon:%.6f Sp:%.5f Alt:%.1f",
+              gps.date.month(),gps.date.day(),gps.date.year(),gps.time.hour(),gps.time.minute(),gps.time.second(),gps.satellites.value(),
+              gps.location.lat(), gps.location.lng(), gps.speed.kmph(),gps.altitude.meters());
+              SerialUSB.print("Sending message: ");
+              SerialUSB.println(GPStransmit);
+              sendLen = strlen(GPStransmit);
+              rf95.send((uint8_t *) GPStransmit, sendLen);
+              memset(GPStransmit, 0, sendLen);
               rf95.waitPacketSent();
             }
           }
@@ -191,7 +192,8 @@ void loop()
   }
   
   else {
-    if (millis()-GPSreceivingTimeout > 8000) {    //if GPS has not received a signal in 5 seconds
+    if (millis()-GPSreceivingTimeout > 8000) {    //if GPS reciever has not received any updates in 8 seconds
+      timeout = millis();
       GPSreceivingTimeout = millis();
       SerialUSB.print("Sending wait message: ");
       uint8_t waitMessageSend[] = "Waiting for GPS";
@@ -209,7 +211,6 @@ void loop()
           SerialUSB.println((char*)buf);
           //SerialUSB.print(" RSSI: ");
           //SerialUSB.print(rf95.lastRssi(), DEC);
-          //while(!Serial1.available()){}
         }
         else {
           SerialUSB.println("Receive failed");
