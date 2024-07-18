@@ -26,7 +26,7 @@ void setup()
   // It may be difficult to read serial messages on startup. The following
   // line will wait for serial to be ready before continuing. Comment out if not needed.
   //while(!SerialUSB);
-  SerialUSB.println("RFM Server!");
+  //SerialUSB.println("RFM Server!");
 
   //Initialize the Radio. 
   if (rf95.init() == false){
@@ -35,7 +35,7 @@ void setup()
   }
   else{
   // An LED indicator to let us know radio initialization has completed.
-    SerialUSB.println("Receiver up!");
+    //SerialUSB.println("Receiver up!");
     digitalWrite(LED, HIGH);
     delay(500);
     digitalWrite(LED, LOW);
@@ -61,11 +61,11 @@ void loop()
       digitalWrite(LED, HIGH); //Turn on status LED
       timeSinceLastPacket = millis(); //Timestamp this packet
 
-      SerialUSB.print("Received message: ");
-      SerialUSB.print((char*)buf);
+      //SerialUSB.print("Received message: ");
+      SerialUSB.println((char*)buf);
       //SerialUSB.print(" RSSI: ");
       //SerialUSB.print(rf95.lastRssi(), DEC);
-      SerialUSB.println();
+      //SerialUSB.println();
 
       // Send a reply
       String BUF = (char*)buf;
