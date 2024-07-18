@@ -120,7 +120,7 @@ void loop()
         sendLen = strlen(GPStransmit);
         //sprintf(toSend, "Hi, my counter is: %d", packetCounter++);
         //rf95.send((uint8_t *) toSend, sizeof(toSend));
-        rf95.send((uint8_t *) GPStransmit, sendLen);
+        rf95.send((uint8_t *) GPStransmit, sendLen+1);  //add 1 to length to include terminating character
         
         //GPStransmit[0] = { 0 };
         memset(GPStransmit, 0, sendLen);
