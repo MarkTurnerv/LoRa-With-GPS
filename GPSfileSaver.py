@@ -10,13 +10,16 @@ and write to csv file
 Note: File never closes serial line, so console must be closed between runs to force
         serial to disconnect. Also disconnect serial port from Arduino so line is not busy
 """
+import sys
 import serial
 import serial.tools.list_ports
+import time
 #import csv
 import os
 import matplotlib  #Use to move figure to upper right corner
 import matplotlib.pyplot as plt #import matplotlib library
 import pandas as pd
+import PySimpleGUI as sg
 
 plt.ion() #Tell matplotlib you want interactive mode to plot live data
 #List available serial ports and have user input comport to use
@@ -25,7 +28,21 @@ print("Available com ports: ")
 for p in ports:
     print(p)
     
-ArduinoPort = input("Enter com port: ")
+
+port_layout = [[sg.InputCombo(values=ports, key = '_port_',  font = ('any', 16))]]
+layout_pick_port = [[sg.Frame('Select Serial Port: ', port_layout, font = 'any 16')],
+                    [sg.Submit( font = ('any', 16)), sg.Cancel( font = ('any', 16))]]
+
+serial_window = sg.Window('Select COM Port', layout_pick_port)
+event, values = serial_window.Read()
+serial_window.Close()
+
+if event is None or event == 'Cancel':
+    sys.exit()
+if event == 'Submit':
+    print(values['_port_'])
+    
+ArduinoPort = str(values['_port_']).split(' ', 1)[0]#input("Enter com port: ")
 
 ser = serial.Serial(ArduinoPort,timeout=10) #open serial port with 10 sec timout
 
@@ -46,7 +63,7 @@ while(newFilename != True):
     else:
         newFilename = True
 f = open(os.path.join(results_dir,filename),'a')
-header = "Date Time SatCount Latitude Longitude Speed Altitude Overflow\n"
+header = "Date Time SatCount Latitude Longitude Speed Altitude\n"
 f.write(header)
 f.close()
 '''        
@@ -94,7 +111,14 @@ while True:
     data = pd.read_table(os.path.join(results_dir,filename), sep = ' ', index_col = 'Time') #, skiprows = rowsToSkip
     data.drop(["for"], inplace = True, errors = 'ignore')
     data.drop(["not"], inplace = True, errors = 'ignore')
-    plt.plot(data['Altitude'])
+    time.sleep(0.01)
+    #plt.clf()
+    plt.plot(data.index,data['Altitude'])
+    plt.xlabel("Timestamp")
+    plt.ylabel("Altitude [m]")
+    plt.title('GPS altitude')
+    plt.grid(True)
+    time.sleep(0.01)
     
     
     
