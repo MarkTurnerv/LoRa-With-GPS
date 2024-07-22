@@ -12,6 +12,8 @@ https://github.com/PaulStoffregen/RadioHead/tree/master/examples/rf95
 To do:
   remove unnecessary GPS transmissions?
   test different transmitter powers
+  increase C/R, increase Spreading Factor, minimize? Bandwidth
+  https://medium.com/home-wireless/testing-lora-radios-with-the-limesdr-mini-part-2-37fa481217ff
 
   Both the TX and RX ProRF boards will need a wire antenna. We recommend a 3" piece of wire.
 */
@@ -39,6 +41,7 @@ int LED = 13; //Status LED is on pin 13
 float frequency = 921.2; //Broadcast frequency
 byte sendLen;   //length of the GPS message to be sent
 const int maxCharLen = 150; //amount of memory allocated to fit GPS data
+//maximum LoRa transmission = 255 octets - 1 byte for message length - 4 bytes for header - 2 bytes FCS = 250 max transmission length
 char GPStransmit[150];    //variable to contain the GPS data to be send over LoRa
 TinyGPSPlus gps;    //instance of TinyGPSPlus
 bool locUpd=0;    //booleans to check whether the location, altitude, and number of available satellites has been updated
@@ -46,6 +49,7 @@ bool altUpd = 0;
 bool satCntUpd = 0;
 int timeout=0;    //timeout check for if only part of satellite data is updated within 5 seconds
 int GPSreceivingTimeout = 0;    //timeout check for if no satellite data is updated within 8 seconds
+bool safeMode = 0;
 
 void setup()
 {
@@ -74,6 +78,10 @@ void setup()
 
   // Set frequency
   rf95.setFrequency(frequency);
+  rf95.setSignalBandwidth(65000); //62.5kHz, see RH_RF95.h for documentation
+  rf95.setSpreadingFactor(9);  //increasing SF increases range at cost of data transmission rate
+  //at SF=11 server drops half of the messages when sending at maximum speed (~2-3 sec/transmission)
+  rf95.setCodingRate4(8);
 
    // The default transmitter power is 13dBm, using PA_BOOST.
    // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then 
@@ -82,7 +90,7 @@ void setup()
    rf95.setTxPower(23, false);
 
    //send header (can be saved on receiving end using GPSfileSaver.py)
-   uint8_t initSend[] = "Date, Time, SatelliteCount, Latitude, Longitude, Speed (kmph), Altitude (m)";
+   uint8_t initSend[] = "Date, Time, SatelliteCount, Latitude, Longitude, Speed (kmph), Altitude (m), SNR";
   //sprintf(toSend, "Hi, my counter is: %d", packetCounter++);
   SerialUSB.println("Sending Initial Message: ");
   rf95.send(initSend, sizeof(initSend));
@@ -91,6 +99,12 @@ void setup()
 
 void loop()
 {
+  /*if(safeMode){
+    safeTransmission();
+  }*
+  else if (safeMode ==0){
+    highDataRate();
+  }*/
   if(Serial1.available()) {
     if(gps.encode(Serial1.read())) {
       if(gps.location.isUpdated()) {  //check if location data has been updated since last loop
@@ -175,7 +189,7 @@ void loop()
               rf95.waitPacketSent();
               delay(250);
               //send GPS data
-              snprintf(GPStransmit,maxCharLen, "%d/%d/%d %02d:%02d:%02d SC:%d lat:%.6f lon:%.6f Sp:%.5f Alt:%.1f",
+              snprintf(GPStransmit,maxCharLen, "%d/%d/%d %02d:%02d:%02d SC:%d lat:%.6f lon:%.6f Sp:%.5f Alt:%.1f ",
               gps.date.month(),gps.date.day(),gps.date.year(),gps.time.hour(),gps.time.minute(),gps.time.second(),gps.satellites.value(),
               gps.location.lat(), gps.location.lng(), gps.speed.kmph(),gps.altitude.meters());
               SerialUSB.print("Sending message: ");
@@ -192,7 +206,7 @@ void loop()
   }
   
   else {
-    if (millis()-GPSreceivingTimeout > 8000) {    //if GPS reciever has not received any updates in 8 seconds
+    if (millis()-GPSreceivingTimeout > 1000) {    //if GPS reciever has not received any updates in 8 seconds
       timeout = millis();
       GPSreceivingTimeout = millis();
       SerialUSB.print("Sending wait message: ");
@@ -211,6 +225,7 @@ void loop()
           SerialUSB.println((char*)buf);
           //SerialUSB.print(" RSSI: ");
           //SerialUSB.print(rf95.lastRssi(), DEC);
+
         }
         else {
           SerialUSB.println("Receive failed");
@@ -222,3 +237,22 @@ void loop()
     }
   }
 }
+
+
+void safeTransmission(){
+  rf95.sleep();
+  rf95.setSignalBandwidth(62500); //62.5kHz, see RH_RF95.h for documentation
+  rf95.setSpreadingFactor(7);
+  rf95.setCodingRate4(8);
+  safeMode = 1;
+}
+
+void highDataRate(){
+  rf95.sleep();
+  rf95.setSignalBandwidth(125000); //125kHz, see RH_RF95.h for documentation
+  rf95.setSpreadingFactor(9);
+  rf95.setCodingRate4(4);
+  safeMode = 0;
+}
+//set interrupt upon receiving message (so also limit # of server messages sent)
+//set commands to change freq, ^, sleepmode

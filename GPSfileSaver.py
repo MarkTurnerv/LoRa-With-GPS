@@ -63,7 +63,7 @@ while(newFilename != True):
     else:
         newFilename = True
 f = open(os.path.join(results_dir,filename),'a')
-header = "Date Time SatCount Latitude Longitude Speed Altitude\n"
+header = "Date Time SatCount Latitude Longitude Speed Altitude SNR\n"
 f.write(header)
 f.close()
 '''        
@@ -80,6 +80,16 @@ def move_figure(f, x, y):
         # You can also use window.setGeometry
         plt.gcf().canvas.manager.window.move(int(x), y)
         '''
+        
+layout_hk = [[sg.Text('GPS Data House Keeping', font = ('any', 16, 'underline'))],
+            [sg.Text('')],
+            [sg.Text('Satellite Count: ',  font = ('any', 16)), sg.Text('', key='_Sat_Count_',  font = ('any', 16))],
+            [sg.Text('Speed [km/h]: ',  font = ('any', 16)), sg.Text('', key='_Air_Temp_',  font = ('any', 16))],
+            [sg.Text('Altitude [m]: ',  font = ('any', 16)), sg.Text('', key='_altitude_',  font = ('any', 16))],
+            [sg.Text('Latitude: ',  font = ('any', 16)), sg.Text('', key='_lat_',  font = ('any', 16))],
+            [sg.Text('Longitude: ',  font = ('any', 16)), sg.Text('', key='_lon_',  font = ('any', 16))],
+            [sg.Text('Timestamp: ',  font = ('any', 16)), sg.Text('', key='_time_',  font = ('any', 16))]]
+hk_name = 'GPS Data House Keeping'
 #i=0
 #skipRow = [True]    #don't skip first row (header)
 #rowsToSkip = []

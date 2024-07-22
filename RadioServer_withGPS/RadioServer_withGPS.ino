@@ -17,6 +17,7 @@ long timeSinceLastPacket = 0; //Tracks the time stamp of last packet received
 // 868MHz.This works but it is unknown how well the radio configures to this frequency:
 //float frequency = 864.1;
 float frequency = 921.2;
+bool safeMode = 0;
 
 void setup()
 {
@@ -43,7 +44,9 @@ void setup()
   }
 
   rf95.setFrequency(frequency); 
-
+  rf95.setSignalBandwidth(65000); //62.5kHz, see RH_RF95.h for documentation
+  rf95.setSpreadingFactor(9);
+  rf95.setCodingRate4(8);
  // The default transmitter power is 13dBm, using PA_BOOST.
  // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then 
  // you can set transmitter powers from 5 to 23 dBm:
@@ -52,6 +55,12 @@ void setup()
 
 void loop()
 {
+  /*if(safeMode){
+  safeTransmission();
+  }
+  else if (safeMode ==0){
+    highDataRate();
+  }*/
   if (rf95.available()){
     // Should be a message for us now
     uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
@@ -62,7 +71,8 @@ void loop()
       timeSinceLastPacket = millis(); //Timestamp this packet
 
       //SerialUSB.print("Received message: ");
-      SerialUSB.println((char*)buf);
+      SerialUSB.print((char*)buf);
+      SerialUSB.println(rf95.lastSNR());
       //SerialUSB.print(" RSSI: ");
       //SerialUSB.print(rf95.lastRssi(), DEC);
       //SerialUSB.println();
@@ -99,4 +109,22 @@ void loop()
     digitalWrite(LED, LOW); //Turn off status LED
     timeSinceLastPacket = millis(); //Don't write LED but every 1s
   }
+}
+
+void safeTransmission(){
+  rf95.sleep();
+  rf95.setSignalBandwidth(125000); //62.5kHz, see RH_RF95.h for documentation
+  rf95.setSpreadingFactor(7);
+  rf95.setCodingRate4(8);
+  safeMode = 1;
+  rf95.available();
+}
+
+void highDataRate(){
+  rf95.sleep();
+  rf95.setSignalBandwidth(125000); //125kHz, see RH_RF95.h for documentation
+  rf95.setSpreadingFactor(9);
+  rf95.setCodingRate4(4);
+  safeMode = 0;
+  rf95.available();
 }
