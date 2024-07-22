@@ -50,6 +50,12 @@ bool satCntUpd = 0;
 int timeout=0;    //timeout check for if only part of satellite data is updated within 5 seconds
 int GPSreceivingTimeout = 0;    //timeout check for if no satellite data is updated within 8 seconds
 bool safeMode = 0;
+byte buf[RH_RF95_MAX_MESSAGE_LEN];
+byte len = sizeof(buf);
+
+//Teensy setup
+//int pinLoRaPower = ;
+
 
 void setup()
 {
@@ -106,6 +112,15 @@ void loop()
     highDataRate();
   }*/
   if(Serial1.available()) {
+     if (rf95.waitAvailableTimeout(500)) {
+        // Should be a reply message for us now
+        if (rf95.recv(buf, &len)) {
+          String BUF = (char*)buf;
+          if (BUF.startsWith("Cmd")){
+            cmdParse(BUF);
+          }
+        }
+      }
     if(gps.encode(Serial1.read())) {
       if(gps.location.isUpdated()) {  //check if location data has been updated since last loop
         locUpd = 1;
@@ -202,10 +217,28 @@ void loop()
           }
         }
       }
+      if (rf95.waitAvailableTimeout(500)) {
+        // Should be a reply message for us now
+        if (rf95.recv(buf, &len)) {
+          String BUF = (char*)buf;
+          if (BUF.startsWith("Cmd")){
+            cmdParse(BUF);
+          }
+        }
+      }
     }
   }
   
   else {
+     if (rf95.waitAvailableTimeout(500)) {
+       // Should be a reply message for us now
+       if (rf95.recv(buf, &len)) {
+         String BUF = (char*)buf;
+         if (BUF.startsWith("Cmd")){
+           cmdParse(BUF);
+         }
+       }
+     }
     if (millis()-GPSreceivingTimeout > 1000) {    //if GPS reciever has not received any updates in 8 seconds
       timeout = millis();
       GPSreceivingTimeout = millis();
@@ -215,16 +248,20 @@ void loop()
       rf95.waitPacketSent();
 
       // Now wait for a reply
-      byte buf[RH_RF95_MAX_MESSAGE_LEN];
-      byte len = sizeof(buf);
-
       if (rf95.waitAvailableTimeout(2000)) {
         // Should be a reply message for us now
         if (rf95.recv(buf, &len)) {
-          SerialUSB.print("Got reply: ");
-          SerialUSB.println((char*)buf);
-          //SerialUSB.print(" RSSI: ");
-          //SerialUSB.print(rf95.lastRssi(), DEC);
+          String BUF = (char*)buf;
+          if (BUF.startsWith("Cmd")){
+            cmdParse(BUF);
+          }
+          else {
+            SerialUSB.print("Got reply: ");
+            
+            SerialUSB.println(BUF);
+            //SerialUSB.print(" RSSI: ");
+            //SerialUSB.print(rf95.lastRssi(), DEC);
+          }
 
         }
         else {
@@ -256,3 +293,62 @@ void highDataRate(){
 }
 //set interrupt upon receiving message (so also limit # of server messages sent)
 //set commands to change freq, ^, sleepmode
+
+void cmdParse(String BUF){
+  if (BUF.startsWith("Cmd: sleep")){
+    uint8_t waitMessageSend[] = "Client Entering Sleep Mode";
+     rf95.send(waitMessageSend, sizeof(waitMessageSend));
+    rf95.waitPacketSent();
+    rf95.sleep();
+    return;
+  }
+  if (BUF.startsWith("Cmd: setBW")){
+    int Blen = BUF.length();
+    String Bnumber = "";
+    for(int i = 0; i <= Blen-11; i++) {
+      Bnumber += BUF.charAt(Blen+i-10);
+    }
+    rf95.setSignalBandwidth(Bnumber.toInt());
+    
+    char setMsg[30];
+    snprintf(setMsg,30, "Bandwidth set:%d", Bnumber.toInt());
+    SerialUSB.print("Sending set message: ");
+    SerialUSB.println(setMsg);
+    sendLen = strlen(setMsg);
+    rf95.send((uint8_t *) setMsg, sendLen);
+    memset(setMsg, 0, sendLen);
+    rf95.waitPacketSent();
+  }
+  if (BUF.startsWith("Cmd: setSF")){
+    int Blen = BUF.length();
+    String Bnumber = "";
+    for(int i = 0; i <= Blen-11; i++) {
+      Bnumber += BUF.charAt(Blen+i-10);
+    }
+    rf95.setSpreadingFactor(Bnumber.toInt());
+    char setMsg[30];
+    snprintf(setMsg,30, "Spreading Factor set:%d", Bnumber.toInt());
+    SerialUSB.print("Sending set message: ");
+    SerialUSB.println(setMsg);
+    sendLen = strlen(setMsg);
+    rf95.send((uint8_t *) setMsg, sendLen);
+    memset(setMsg, 0, sendLen);
+    rf95.waitPacketSent();
+  }
+  if (BUF.startsWith("Cmd: setCR")){
+    int Blen = BUF.length();
+    String Bnumber = "";
+    for(int i = 0; i <= Blen-11; i++) {
+      Bnumber += BUF.charAt(Blen+i-10);
+    }
+    rf95.setCodingRate4(Bnumber.toInt());
+    char setMsg[30];
+    snprintf(setMsg,30, "Bandwidth set:%d", Bnumber.toInt());
+    SerialUSB.print("Sending set message: ");
+    SerialUSB.println(setMsg);
+    sendLen = strlen(setMsg);
+    rf95.send((uint8_t *) setMsg, sendLen);
+    memset(setMsg, 0, sendLen);
+    rf95.waitPacketSent();   
+  }
+}

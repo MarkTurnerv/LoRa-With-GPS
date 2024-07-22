@@ -1,5 +1,5 @@
 #include <SPI.h>
-
+#include "CommandLineInterface.h"
 //Radio Head Library: 
 #include <RH_RF95.h>
 
@@ -128,3 +128,5 @@ void highDataRate(){
   safeMode = 0;
   rf95.available();
 }
+
+void 
