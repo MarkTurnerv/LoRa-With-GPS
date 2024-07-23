@@ -1,5 +1,5 @@
 #include <SPI.h>
-#include "CommandLineInterface.h"
+//#include "CommandLineInterface.h"
 //Radio Head Library: 
 #include <RH_RF95.h>
 
@@ -18,6 +18,8 @@ long timeSinceLastPacket = 0; //Tracks the time stamp of last packet received
 //float frequency = 864.1;
 float frequency = 921.2;
 bool safeMode = 0;
+char header[] = "Date, Time, SatelliteCount, Latitude, Longitude, Speed (kmph), Altitude (m), SNR";
+String DEBUG_Buff;  //buffer for the USB Serial monitor
 
 void setup()
 {
@@ -61,11 +63,12 @@ void loop()
   else if (safeMode ==0){
     highDataRate();
   }*/
+  checkForCmd();
   if (rf95.available()){
     // Should be a message for us now
     uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
     uint8_t len = sizeof(buf);
-
+    checkForCmd();
     if (rf95.recv(buf, &len)){
       digitalWrite(LED, HIGH); //Turn on status LED
       timeSinceLastPacket = millis(); //Timestamp this packet
@@ -101,7 +104,7 @@ void loop()
         digitalWrite(LED, LOW); //Turn off status LED
       }
     }
-    else
+    else 
       SerialUSB.println("Recieve failed");
   }
   //Turn off status LED if we haven't received a packet after 1s
@@ -129,4 +132,208 @@ void highDataRate(){
   rf95.available();
 }
 
-void 
+void checkForCmd() {
+  if (SerialUSB.available()) {
+   char DEBUG_Char = SerialUSB.read();
+   
+   if((DEBUG_Char == '\n') || (DEBUG_Char == '\r'))
+   {
+    parseCommand(DEBUG_Buff);
+    DEBUG_Buff = "";
+   } else
+   {
+    DEBUG_Buff += DEBUG_Char;
+   }   
+  }
+}
+
+void parseCommand(String commandToParse) {
+  /* This is where all the commands are interpreted and is the meat of the control system
+   * so far
+   * #header - print a header to the terminal
+   * #safeTrans - enter safeTransmission mode
+   * #HDR - enter HighDataRate
+   * #sleep  - puts LoRa radio client and server to sleep
+   * #setBW, - Sets LoRa client and server bandwidth
+   * #setSF, - toggles to cummulative defined bins
+   * #setCR, float - set a new pump speed
+   * #save - save pump setpoints to EEPROM
+   * #clear - clear saved pump settings
+   */
+  
+  char * strtokIndx; // this is used by strtok() as an index
+  char CommandArray[64];
+
+  int int1 = 0;
+
+  if(commandToParse.startsWith("#header"))
+  {
+     SerialUSB.println(header);  
+  }
+  else if(commandToParse.startsWith("#safeTrans")) {
+      uint8_t toSend[] = "Cmd: safeTrans";
+      rf95.send(toSend, sizeof(toSend));
+      rf95.waitPacketSent();
+      safeTransmission();
+      if (rf95.waitAvailableTimeout(2000)) {
+      // Should be a reply message for us now
+      uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
+      uint8_t len = sizeof(buf);
+      if (rf95.recv(buf, &len)) {
+        SerialUSB.print("Got reply: ");
+        SerialUSB.println((char*)buf);
+      }
+      else {
+        SerialUSB.println("Receive failed");
+      }
+    }
+    else {
+      SerialUSB.println("No reply, is the receiver running?");
+    }
+    rf95.sleep();
+  }
+  else if(commandToParse.startsWith("#HDR")) {
+      uint8_t toSend[] = "Cmd: HDR";
+      rf95.send(toSend, sizeof(toSend));
+      rf95.waitPacketSent();
+      highDataRate();
+      if (rf95.waitAvailableTimeout(2000)) {
+      // Should be a reply message for us now
+      uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
+      uint8_t len = sizeof(buf);
+      if (rf95.recv(buf, &len)) {
+        SerialUSB.print("Got reply: ");
+        SerialUSB.println((char*)buf);
+      }
+      else {
+        SerialUSB.println("Receive failed");
+      }
+    }
+    else {
+      SerialUSB.println("No reply, is the receiver running?");
+    }
+    rf95.sleep();
+  }
+  else if(commandToParse.startsWith("#sleep")) {
+      uint8_t toSend[] = "Cmd: sleep";
+      rf95.send(toSend, sizeof(toSend));
+      rf95.waitPacketSent();
+      if (rf95.waitAvailableTimeout(2000)) {
+      // Should be a reply message for us now
+      uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
+      uint8_t len = sizeof(buf);
+      if (rf95.recv(buf, &len)) {
+        SerialUSB.print("Got reply: ");
+        SerialUSB.println((char*)buf);
+      }
+      else {
+        SerialUSB.println("Receive failed");
+      }
+    }
+    else {
+      SerialUSB.println("No reply, is the receiver running?");
+    }
+    rf95.sleep();
+  }
+  else if(commandToParse.startsWith("#setBW"))  //7800-250000
+  {
+    commandToParse.toCharArray(CommandArray, 64); //copy the String() to a string
+    strtokIndx = strtok(CommandArray,",");      // get the first part - the string we don't care about this
+    SerialUSB.println(strtokIndx);
+    strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
+    int1 = atoi(strtokIndx);     // convert this part to a int for the bandwidth
+    SerialUSB.println(strtokIndx);
+    SerialUSB.print("Setting Bandwidth to: ");
+    SerialUSB.print(int1); SerialUSB.println("kHz");
+    char cmdMsg[64];
+    snprintf(cmdMsg,64, "Cmd: setBW%d", int1);
+    SerialUSB.println(cmdMsg);
+    int sendLen = strlen(cmdMsg);
+    rf95.send((uint8_t *) cmdMsg, sendLen);
+    memset(cmdMsg, 0, sendLen);
+    commandToParse = "";
+    if (rf95.waitAvailableTimeout(2000)) {
+      // Should be a reply message for us now
+      uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
+      uint8_t len = sizeof(buf);
+      if (rf95.recv(buf, &len)) {
+        SerialUSB.print("Got reply: ");
+        SerialUSB.println((char*)buf);
+        rf95.setSignalBandwidth(int1);
+      }
+      else {
+        SerialUSB.println("Receive failed");
+      }
+    }
+    else {
+      SerialUSB.println("No reply, is the receiver running?");
+    }
+  }
+  else if(commandToParse.startsWith("#setSF"))  //valid inputs: integer 6-12 (will limit to 6 or 12 if outside of range)
+  {
+    commandToParse.toCharArray(CommandArray, 64); //copy the String() to a string
+    strtokIndx = strtok(CommandArray,",");      // get the first part - the string we don't care about this
+  
+    strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
+    int1 = atoi(strtokIndx);     // convert this part to a int for the spreading factor
+
+    SerialUSB.print("Setting Spreading Factor to: ");
+    SerialUSB.print(int1);
+    char cmdMsg[64];
+    snprintf(cmdMsg,64, "Cmd: setSF%d", int1);
+    int sendLen = strlen(cmdMsg);
+    rf95.send((uint8_t *) cmdMsg, sendLen);
+    memset(cmdMsg, 0, sendLen);
+    commandToParse = "";
+    if (rf95.waitAvailableTimeout(2000)) {
+      // Should be a reply message for us now
+      uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
+      uint8_t len = sizeof(buf);
+      if (rf95.recv(buf, &len)) {
+        SerialUSB.print("Got reply: ");
+        SerialUSB.println((char*)buf);
+        rf95.setSpreadingFactor(int1);
+      }
+      else {
+        SerialUSB.println("Receive failed");
+      }
+    }
+    else {
+      SerialUSB.println("No reply, is the receiver running?");
+    }
+  }
+  else if(commandToParse.startsWith("#setCR"))  //Valid denominator values are 5, 6, 7 or 8.
+  {
+    commandToParse.toCharArray(CommandArray, 64); //copy the String() to a string
+    strtokIndx = strtok(CommandArray,",");      // get the first part - the string we don't care about this
+  
+    strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
+    int1 = atoi(strtokIndx);     // convert this part to a int for the bandwidth
+
+    SerialUSB.print("Setting Coding Rate to: ");
+    SerialUSB.print("4/"); SerialUSB.println(int1);
+    char cmdMsg[64];
+    snprintf(cmdMsg,64, "Cmd: setCR%d", int1);
+    int sendLen = strlen(cmdMsg);
+    rf95.send((uint8_t *) cmdMsg, sendLen);
+    memset(cmdMsg, 0, sendLen);
+    commandToParse = "";
+    rf95.waitPacketSent();
+    if (rf95.waitAvailableTimeout(2000)) {
+      // Should be a reply message for us now
+      uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
+      uint8_t len = sizeof(buf);
+      if (rf95.recv(buf, &len)) {
+        SerialUSB.print("Got reply: ");
+        SerialUSB.println((char*)buf);
+        rf95.setCodingRate4(int1);
+      }
+      else {
+        SerialUSB.println("Receive failed");
+      }
+    }
+    else {
+      SerialUSB.println("No reply, is the receiver running?");
+    }
+  }
+}
