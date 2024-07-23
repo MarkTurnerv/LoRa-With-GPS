@@ -157,7 +157,7 @@ void parseCommand(String commandToParse) {
    * #setBW, - Sets LoRa client and server bandwidth
    * #setSF, - toggles to cummulative defined bins
    * #setCR, float - set a new pump speed
-   * #save - save pump setpoints to EEPROM
+   * #send - send characters
    * #clear - clear saved pump settings
    */
   
@@ -246,12 +246,13 @@ void parseCommand(String commandToParse) {
     SerialUSB.print("Setting Bandwidth to: ");
     SerialUSB.print(int1); SerialUSB.println("kHz");
     char cmdMsg[64];
-    snprintf(cmdMsg,64, "Cmd: setBW%d", int1);
+    snprintf(cmdMsg,64, "Cmd: setBW,%d", int1);
     SerialUSB.println(cmdMsg);
     int sendLen = strlen(cmdMsg);
     rf95.send((uint8_t *) cmdMsg, sendLen);
     memset(cmdMsg, 0, sendLen);
     commandToParse = "";
+    //rf95.setSignalBandwidth(int1);
     if (rf95.waitAvailableTimeout(2000)) {
       // Should be a reply message for us now
       uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
@@ -335,5 +336,11 @@ void parseCommand(String commandToParse) {
     else {
       SerialUSB.println("No reply, is the receiver running?");
     }
+  }
+  else if (commandToParse.startsWith("#send")) {
+    char sendMes[65];
+    commandToParse.toCharArray(sendMes,64);
+    rf95.send((uint8_t*)sendMes, 65);
+    rf95.waitPacketSent();
   }
 }
