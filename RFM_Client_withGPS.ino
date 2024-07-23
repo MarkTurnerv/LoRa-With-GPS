@@ -9,6 +9,8 @@ Which is in turn based off rf95 examples from PaulStoffregen RadioHead
   -rf95_server
 https://github.com/PaulStoffregen/RadioHead/tree/master/examples/rf95
 
+RadioHead refrence: https://www.airspayce.com/mikem/arduino/RadioHead/classRHGenericDriver.html#a9269fb2eddfaa055c31769619d808dbe
+
 To do:
   remove unnecessary GPS transmissions?
   test different transmitter powers
@@ -112,15 +114,7 @@ void loop()
     highDataRate();
   }*/
   if(Serial1.available()) {
-     if (rf95.waitAvailableTimeout(500)) {
-        // Should be a reply message for us now
-        if (rf95.recv(buf, &len)) {
-          String BUF = (char*)buf;
-          if (BUF.startsWith("Cmd")){
-            cmdParse(BUF);
-          }
-        }
-      }
+    checkCmd();
     if(gps.encode(Serial1.read())) {
       if(gps.location.isUpdated()) {  //check if location data has been updated since last loop
         locUpd = 1;
@@ -217,29 +211,13 @@ void loop()
           }
         }
       }
-      if (rf95.waitAvailableTimeout(500)) {
-        // Should be a reply message for us now
-        if (rf95.recv(buf, &len)) {
-          String BUF = (char*)buf;
-          if (BUF.startsWith("Cmd")){
-            cmdParse(BUF);
-          }
-        }
-      }
     }
   }
   
   else {
-     if (rf95.waitAvailableTimeout(500)) {
-       // Should be a reply message for us now
-       if (rf95.recv(buf, &len)) {
-         String BUF = (char*)buf;
-         if (BUF.startsWith("Cmd")){
-           cmdParse(BUF);
-         }
-       }
-     }
-    if (millis()-GPSreceivingTimeout > 1000) {    //if GPS reciever has not received any updates in 8 seconds
+    //checkCmd();
+    SerialUSB.println("after chk");
+    if (millis()-GPSreceivingTimeout > 8000) {    //if GPS reciever has not received any updates in 8 seconds
       timeout = millis();
       GPSreceivingTimeout = millis();
       SerialUSB.print("Sending wait message: ");
@@ -248,20 +226,16 @@ void loop()
       rf95.waitPacketSent();
 
       // Now wait for a reply
+      checkCmd();
       if (rf95.waitAvailableTimeout(2000)) {
         // Should be a reply message for us now
         if (rf95.recv(buf, &len)) {
           String BUF = (char*)buf;
-          if (BUF.startsWith("Cmd")){
-            cmdParse(BUF);
-          }
-          else {
-            SerialUSB.print("Got reply: ");
-            
-            SerialUSB.println(BUF);
-            //SerialUSB.print(" RSSI: ");
-            //SerialUSB.print(rf95.lastRssi(), DEC);
-          }
+          SerialUSB.print("Got reply: ");
+          
+          SerialUSB.println(BUF);
+          //SerialUSB.print(" RSSI: ");
+          //SerialUSB.print(rf95.lastRssi(), DEC);
 
         }
         else {
@@ -294,7 +268,41 @@ void highDataRate(){
 //set interrupt upon receiving message (so also limit # of server messages sent)
 //set commands to change freq, ^, sleepmode
 
+void checkCmd(){
+  SerialUSB.println("checking for Cmd");
+  if (rf95.waitAvailableTimeout(1000)) {
+    SerialUSB.println("checking for Cmd x2");
+    // Should be a reply message for us now
+    if (rf95.recv(buf, &len)) {
+      String BUF = (char*)buf;
+      SerialUSB.println((char*)buf);
+      SerialUSB.println(BUF);
+      if (BUF.startsWith("Cmd")){
+        cmdParse(BUF);
+      }
+    }
+  }
+}
+
 void cmdParse(String BUF){
+  char * strtokIndx; // this is used by strtok() as an index
+  int bufInt=0;
+  char CommandArray[64];
+  if (BUF.startsWith("Cmd: safeTrans")){
+    safeTransmission();
+    uint8_t waitMessageSend[] = "Client Entering Safe Transmission Mode";
+    rf95.send(waitMessageSend, sizeof(waitMessageSend));
+    rf95.waitPacketSent();
+    return;
+  }
+  if (BUF.startsWith("Cmd: HDR")){
+    highDataRate();
+    uint8_t waitMessageSend[] = "Client Entering Sleep Mode";
+     rf95.send(waitMessageSend, sizeof(waitMessageSend));
+    rf95.waitPacketSent();
+    rf95.sleep();
+    return;
+  }
   if (BUF.startsWith("Cmd: sleep")){
     uint8_t waitMessageSend[] = "Client Entering Sleep Mode";
      rf95.send(waitMessageSend, sizeof(waitMessageSend));
@@ -303,15 +311,15 @@ void cmdParse(String BUF){
     return;
   }
   if (BUF.startsWith("Cmd: setBW")){
-    int Blen = BUF.length();
-    String Bnumber = "";
-    for(int i = 0; i <= Blen-11; i++) {
-      Bnumber += BUF.charAt(Blen+i-10);
-    }
-    rf95.setSignalBandwidth(Bnumber.toInt());
+    BUF.toCharArray(CommandArray, 64);
+    strtokIndx = strtok(CommandArray,",");      // get the first part - the string we don't care about this
+    SerialUSB.println(strtokIndx);
+    strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
+    bufInt = atoi(strtokIndx);     // convert this part to a int for the bandwidth
+    //rf95.setSignalBandwidth(bufInt);
     
     char setMsg[30];
-    snprintf(setMsg,30, "Bandwidth set:%d", Bnumber.toInt());
+    snprintf(setMsg,30, "Bandwidth set:%d", bufInt);
     SerialUSB.print("Sending set message: ");
     SerialUSB.println(setMsg);
     sendLen = strlen(setMsg);
@@ -343,7 +351,7 @@ void cmdParse(String BUF){
     }
     rf95.setCodingRate4(Bnumber.toInt());
     char setMsg[30];
-    snprintf(setMsg,30, "Bandwidth set:%d", Bnumber.toInt());
+    snprintf(setMsg,30, "Coding Ratio set:%d", Bnumber.toInt());
     SerialUSB.print("Sending set message: ");
     SerialUSB.println(setMsg);
     sendLen = strlen(setMsg);
