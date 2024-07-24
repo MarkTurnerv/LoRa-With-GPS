@@ -107,6 +107,7 @@ void setup()
 
 void loop()
 {
+  //checkCmd();
   /*if(safeMode){
     safeTransmission();
   }*
@@ -114,8 +115,8 @@ void loop()
     highDataRate();
   }*/
   if(Serial1.available()) {
-    checkCmd();
     if(gps.encode(Serial1.read())) {
+      checkCmd();
       if(gps.location.isUpdated()) {  //check if location data has been updated since last loop
         locUpd = 1;
       }
@@ -148,7 +149,7 @@ void loop()
         //GPStransmit[0] = { 0 };
         memset(GPStransmit, 0, sendLen);
         rf95.waitPacketSent();
-
+        checkCmd();
         // Now wait for a reply 
         /*  commented out waiting for reply so the transmitter continuously sends GPS data regardless of whether it is recieved
         byte buf[RH_RF95_MAX_MESSAGE_LEN];
@@ -207,6 +208,7 @@ void loop()
               rf95.send((uint8_t *) GPStransmit, sendLen+1);
               memset(GPStransmit, 0, sendLen);
               rf95.waitPacketSent();
+              checkCmd();
             }
           }
         }
@@ -215,8 +217,7 @@ void loop()
   }
   
   else {
-    //checkCmd();
-    SerialUSB.println("after chk");
+    checkCmd();
     if (millis()-GPSreceivingTimeout > 8000) {    //if GPS reciever has not received any updates in 8 seconds
       timeout = millis();
       GPSreceivingTimeout = millis();
@@ -226,7 +227,6 @@ void loop()
       rf95.waitPacketSent();
 
       // Now wait for a reply
-      checkCmd();
       if (rf95.waitAvailableTimeout(2000)) {
         // Should be a reply message for us now
         if (rf95.recv(buf, &len)) {
@@ -289,10 +289,10 @@ void cmdParse(String BUF){
   int bufInt=0;
   char CommandArray[64];
   if (BUF.startsWith("Cmd: safeTrans")){
-    safeTransmission();
     uint8_t waitMessageSend[] = "Client Entering Safe Transmission Mode";
     rf95.send(waitMessageSend, sizeof(waitMessageSend));
     rf95.waitPacketSent();
+    safeTransmission();
     return;
   }
   if (BUF.startsWith("Cmd: HDR")){
@@ -315,7 +315,9 @@ void cmdParse(String BUF){
     strtokIndx = strtok(CommandArray,",");      // get the first part - the string we don't care about this
     strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
     bufInt = atoi(strtokIndx);     // convert this part to a int for the bandwidth
-    
+    if (bufInt < 25000){
+      bufInt = 25000;
+    }
     char setMsg[maxCharLen];
     snprintf(setMsg,maxCharLen, "Bandwidth set:%d", bufInt);
     SerialUSB.print("Sending set message: ");

@@ -172,9 +172,8 @@ void parseCommand(String commandToParse) {
   }
   else if(commandToParse.startsWith("#safeTrans")) {
       uint8_t toSend[] = "Cmd: safeTrans";
-      rf95.send(toSend, sizeof(toSend));
+      rf95.send(toSend, sizeof(toSend)+1);
       rf95.waitPacketSent();
-      safeTransmission();
       if (rf95.waitAvailableTimeout(2000)) {
       // Should be a reply message for us now
       uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
@@ -182,6 +181,7 @@ void parseCommand(String commandToParse) {
       if (rf95.recv(buf, &len)) {
         SerialUSB.print("Got reply: ");
         SerialUSB.println((char*)buf);
+        safeTransmission();
       }
       else {
         SerialUSB.println("Receive failed");
@@ -194,7 +194,7 @@ void parseCommand(String commandToParse) {
   }
   else if(commandToParse.startsWith("#HDR")) {
       uint8_t toSend[] = "Cmd: HDR";
-      rf95.send(toSend, sizeof(toSend));
+      rf95.send(toSend, sizeof(toSend)+1);
       rf95.waitPacketSent();
       highDataRate();
       if (rf95.waitAvailableTimeout(2000)) {
@@ -216,7 +216,7 @@ void parseCommand(String commandToParse) {
   }
   else if(commandToParse.startsWith("#sleep")) {
       uint8_t toSend[] = "Cmd: sleep";
-      rf95.send(toSend, sizeof(toSend));
+      rf95.send(toSend, sizeof(toSend)+1);
       rf95.waitPacketSent();
       if (rf95.waitAvailableTimeout(2000)) {
       // Should be a reply message for us now
@@ -244,10 +244,10 @@ void parseCommand(String commandToParse) {
     int1 = atoi(strtokIndx);     // convert this part to a int for the bandwidth
     SerialUSB.println(strtokIndx);
     SerialUSB.print("Setting Bandwidth to: ");
-    SerialUSB.print(int1); SerialUSB.println("kHz");
+    SerialUSB.print(int1); SerialUSB.println("Hz");
     char cmdMsg[64];
-    snprintf(cmdMsg,64, "Cmd: setBW,%d", int1);
-    SerialUSB.println(cmdMsg);
+    snprintf(cmdMsg,63, "Cmd: setBW,%d", int1);
+    SerialUSB.write(cmdMsg);
     int cmdSendLen = strlen(cmdMsg);
     rf95.send((uint8_t *) cmdMsg, cmdSendLen+1);
     rf95.waitPacketSent();
@@ -360,5 +360,14 @@ void parseCommand(String commandToParse) {
     else {
       SerialUSB.println("No reply, is the receiver running?");
     }
+  }
+  else if (commandToParse.startsWith("#setSerBW")){
+    commandToParse.toCharArray(CommandArray, 64); //copy the String() to a string
+    strtokIndx = strtok(CommandArray,",");      // get the first part - the string we don't care about this
+  
+    strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
+    int1 = atoi(strtokIndx);
+    SerialUSB.print("Setting Server BW to: "); SerialUSB.println(int1);
+    rf95.setSignalBandwidth(int1);
   }
 }
