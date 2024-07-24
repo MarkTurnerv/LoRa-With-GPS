@@ -52,8 +52,8 @@ bool satCntUpd = 0;
 int timeout=0;    //timeout check for if only part of satellite data is updated within 5 seconds
 int GPSreceivingTimeout = 0;    //timeout check for if no satellite data is updated within 8 seconds
 bool safeMode = 0;
-byte buf[RH_RF95_MAX_MESSAGE_LEN];
-byte len = sizeof(buf);
+uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
+uint8_t len = sizeof(buf);
 
 //Teensy setup
 //int pinLoRaPower = ;
@@ -204,7 +204,7 @@ void loop()
               SerialUSB.print("Sending message: ");
               SerialUSB.println(GPStransmit);
               sendLen = strlen(GPStransmit);
-              rf95.send((uint8_t *) GPStransmit, sendLen);
+              rf95.send((uint8_t *) GPStransmit, sendLen+1);
               memset(GPStransmit, 0, sendLen);
               rf95.waitPacketSent();
             }
@@ -270,7 +270,7 @@ void highDataRate(){
 
 void checkCmd(){
   SerialUSB.println("checking for Cmd");
-  if (rf95.waitAvailableTimeout(1000)) {
+  if (rf95.waitAvailableTimeout(2000)) {
     SerialUSB.println("checking for Cmd x2");
     // Should be a reply message for us now
     if (rf95.recv(buf, &len)) {
@@ -313,50 +313,52 @@ void cmdParse(String BUF){
   if (BUF.startsWith("Cmd: setBW")){
     BUF.toCharArray(CommandArray, 64);
     strtokIndx = strtok(CommandArray,",");      // get the first part - the string we don't care about this
+    strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
+    bufInt = atoi(strtokIndx);     // convert this part to a int for the bandwidth
+    
+    char setMsg[maxCharLen];
+    snprintf(setMsg,maxCharLen, "Bandwidth set:%d", bufInt);
+    SerialUSB.print("Sending set message: ");
+    SerialUSB.println(setMsg);
+    byte cmdSendLen = strlen(setMsg);
+    rf95.send((uint8_t *) setMsg, cmdSendLen+1);
+    memset(setMsg, 0, cmdSendLen);
+    rf95.waitPacketSent();
+    rf95.setSignalBandwidth(bufInt);
+  }
+  if (BUF.startsWith("Cmd: setSF")){
+    BUF.toCharArray(CommandArray, 64);
+    strtokIndx = strtok(CommandArray,",");      // get the first part - the string we don't care about this
     SerialUSB.println(strtokIndx);
     strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
     bufInt = atoi(strtokIndx);     // convert this part to a int for the bandwidth
-    //rf95.setSignalBandwidth(bufInt);
     
-    char setMsg[30];
-    snprintf(setMsg,30, "Bandwidth set:%d", bufInt);
+    char setMsg[maxCharLen];
+    snprintf(setMsg,maxCharLen, "Spreading Factor set:%d", bufInt);
     SerialUSB.print("Sending set message: ");
     SerialUSB.println(setMsg);
-    sendLen = strlen(setMsg);
-    rf95.send((uint8_t *) setMsg, sendLen);
-    memset(setMsg, 0, sendLen);
+    byte cmdSendLen = strlen(setMsg);
+    rf95.send((uint8_t *) setMsg, cmdSendLen+1);
+    memset(setMsg, 0, cmdSendLen);
     rf95.waitPacketSent();
-  }
-  if (BUF.startsWith("Cmd: setSF")){
-    int Blen = BUF.length();
-    String Bnumber = "";
-    for(int i = 0; i <= Blen-11; i++) {
-      Bnumber += BUF.charAt(Blen+i-10);
-    }
-    rf95.setSpreadingFactor(Bnumber.toInt());
-    char setMsg[30];
-    snprintf(setMsg,30, "Spreading Factor set:%d", Bnumber.toInt());
-    SerialUSB.print("Sending set message: ");
-    SerialUSB.println(setMsg);
-    sendLen = strlen(setMsg);
-    rf95.send((uint8_t *) setMsg, sendLen);
-    memset(setMsg, 0, sendLen);
-    rf95.waitPacketSent();
+    rf95.setSpreadingFactor(bufInt);
   }
   if (BUF.startsWith("Cmd: setCR")){
-    int Blen = BUF.length();
-    String Bnumber = "";
-    for(int i = 0; i <= Blen-11; i++) {
-      Bnumber += BUF.charAt(Blen+i-10);
-    }
-    rf95.setCodingRate4(Bnumber.toInt());
-    char setMsg[30];
-    snprintf(setMsg,30, "Coding Ratio set:%d", Bnumber.toInt());
+    BUF.toCharArray(CommandArray, 64);
+    strtokIndx = strtok(CommandArray,",");      // get the first part - the string we don't care about this
+    SerialUSB.println(strtokIndx);
+    strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
+    bufInt = atoi(strtokIndx);     // convert this part to a int for the bandwidth
+    
+    rf95.setCodingRate4(bufInt);
+    char setMsg[maxCharLen];
+    snprintf(setMsg,maxCharLen, "Coding Ratio set:%d", bufInt);
     SerialUSB.print("Sending set message: ");
     SerialUSB.println(setMsg);
     sendLen = strlen(setMsg);
-    rf95.send((uint8_t *) setMsg, sendLen);
+    rf95.send((uint8_t *) setMsg, sendLen+1);
     memset(setMsg, 0, sendLen);
-    rf95.waitPacketSent();   
+    rf95.waitPacketSent();
+    rf95.setCodingRate4(bufInt);
   }
 }

@@ -248,18 +248,18 @@ void parseCommand(String commandToParse) {
     char cmdMsg[64];
     snprintf(cmdMsg,64, "Cmd: setBW,%d", int1);
     SerialUSB.println(cmdMsg);
-    int sendLen = strlen(cmdMsg);
-    rf95.send((uint8_t *) cmdMsg, sendLen);
-    memset(cmdMsg, 0, sendLen);
+    int cmdSendLen = strlen(cmdMsg);
+    rf95.send((uint8_t *) cmdMsg, cmdSendLen+1);
+    rf95.waitPacketSent();
+    memset(cmdMsg, 0, cmdSendLen);
     commandToParse = "";
-    //rf95.setSignalBandwidth(int1);
     if (rf95.waitAvailableTimeout(2000)) {
       // Should be a reply message for us now
-      uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
-      uint8_t len = sizeof(buf);
-      if (rf95.recv(buf, &len)) {
+      uint8_t cmdBuf[RH_RF95_MAX_MESSAGE_LEN];
+      uint8_t cmdLen = sizeof(cmdBuf);
+      if (rf95.recv(cmdBuf, &cmdLen)) {
         SerialUSB.print("Got reply: ");
-        SerialUSB.println((char*)buf);
+        SerialUSB.println((char*)cmdBuf);
         rf95.setSignalBandwidth(int1);
       }
       else {
@@ -271,7 +271,7 @@ void parseCommand(String commandToParse) {
     }
   }
   else if(commandToParse.startsWith("#setSF"))  //valid inputs: integer 6-12 (will limit to 6 or 12 if outside of range)
-  {
+  {//Client becomes unresponsive at 6; do NOT set SF below 7
     commandToParse.toCharArray(CommandArray, 64); //copy the String() to a string
     strtokIndx = strtok(CommandArray,",");      // get the first part - the string we don't care about this
   
@@ -279,20 +279,21 @@ void parseCommand(String commandToParse) {
     int1 = atoi(strtokIndx);     // convert this part to a int for the spreading factor
 
     SerialUSB.print("Setting Spreading Factor to: ");
-    SerialUSB.print(int1);
+    SerialUSB.println(int1);
     char cmdMsg[64];
-    snprintf(cmdMsg,64, "Cmd: setSF%d", int1);
-    int sendLen = strlen(cmdMsg);
-    rf95.send((uint8_t *) cmdMsg, sendLen);
-    memset(cmdMsg, 0, sendLen);
+    snprintf(cmdMsg,64, "Cmd: setSF,%d", int1);
+    int cmdSendLen = strlen(cmdMsg);
+    rf95.send((uint8_t *) cmdMsg, cmdSendLen+1);
+    memset(cmdMsg, 0, cmdSendLen);
     commandToParse = "";
+    rf95.waitPacketSent();
     if (rf95.waitAvailableTimeout(2000)) {
       // Should be a reply message for us now
-      uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
-      uint8_t len = sizeof(buf);
-      if (rf95.recv(buf, &len)) {
+      uint8_t cmdBuf[RH_RF95_MAX_MESSAGE_LEN];
+      uint8_t cmdLen = sizeof(cmdBuf);
+      if (rf95.recv(cmdBuf, &cmdLen)) {
         SerialUSB.print("Got reply: ");
-        SerialUSB.println((char*)buf);
+        SerialUSB.println((char*)cmdBuf);
         rf95.setSpreadingFactor(int1);
       }
       else {
@@ -314,19 +315,19 @@ void parseCommand(String commandToParse) {
     SerialUSB.print("Setting Coding Rate to: ");
     SerialUSB.print("4/"); SerialUSB.println(int1);
     char cmdMsg[64];
-    snprintf(cmdMsg,64, "Cmd: setCR%d", int1);
-    int sendLen = strlen(cmdMsg);
-    rf95.send((uint8_t *) cmdMsg, sendLen);
-    memset(cmdMsg, 0, sendLen);
+    snprintf(cmdMsg,64, "Cmd: setCR,%d", int1);
+    int cmdSendLen = strlen(cmdMsg);
+    rf95.send((uint8_t *) cmdMsg, cmdSendLen+1);
+    memset(cmdMsg, 0, cmdSendLen);
     commandToParse = "";
     rf95.waitPacketSent();
     if (rf95.waitAvailableTimeout(2000)) {
       // Should be a reply message for us now
-      uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
-      uint8_t len = sizeof(buf);
-      if (rf95.recv(buf, &len)) {
+      uint8_t cmdBuf[RH_RF95_MAX_MESSAGE_LEN];
+      uint8_t cmdLen = sizeof(cmdBuf);
+      if (rf95.recv(cmdBuf, &cmdLen)) {
         SerialUSB.print("Got reply: ");
-        SerialUSB.println((char*)buf);
+        SerialUSB.println((char*)cmdBuf);
         rf95.setCodingRate4(int1);
       }
       else {
@@ -338,9 +339,26 @@ void parseCommand(String commandToParse) {
     }
   }
   else if (commandToParse.startsWith("#send")) {
-    char sendMes[65];
-    commandToParse.toCharArray(sendMes,64);
-    rf95.send((uint8_t*)sendMes, 65);
+    char sendMes[251];
+    commandToParse.toCharArray(sendMes,251);
+    SerialUSB.println(sendMes);
+    rf95.send((uint8_t*)sendMes, 251);
     rf95.waitPacketSent();
+        if (rf95.waitAvailableTimeout(2000)) {
+      // Should be a reply message for us now
+      uint8_t cmdBuf[RH_RF95_MAX_MESSAGE_LEN];
+      uint8_t cmdLen = sizeof(cmdBuf);
+      if (rf95.recv(cmdBuf, &cmdLen)) {
+        SerialUSB.print("Got reply: ");
+        SerialUSB.println((char*)cmdBuf);
+        rf95.setCodingRate4(int1);
+      }
+      else {
+        SerialUSB.println("Receive failed");
+      }
+    }
+    else {
+      SerialUSB.println("No reply, is the receiver running?");
+    }
   }
 }
