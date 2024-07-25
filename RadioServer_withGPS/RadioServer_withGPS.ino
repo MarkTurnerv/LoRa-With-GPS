@@ -20,10 +20,12 @@ float frequency = 921.2;
 int safeMode = 1;
 char header[] = "Date, Time, SatelliteCount, Latitude, Longitude, Speed (kmph), Altitude (m), SNR";
 String DEBUG_Buff;  //buffer for the USB Serial monitor
+int safeModeTimer = 0;
 
 void setup()
 {
   safeTransmission();
+  //longRange();
   pinMode(LED, OUTPUT);
 
   SerialUSB.begin(9600);
@@ -58,6 +60,7 @@ void setup()
 
 void loop()
 {
+  checkSafeMode();
   checkForCmd();
   if (rf95.available()){
     // Should be a message for us now
@@ -69,7 +72,7 @@ void loop()
       timeSinceLastPacket = millis(); //Timestamp this packet
 
       //SerialUSB.print("Received message: ");
-      SerialUSB.print((char*)buf);
+      SerialUSB.print((char*)buf); SerialUSB.print(" SNR:");
       SerialUSB.println(rf95.lastSNR());
       //SerialUSB.print(" RSSI: ");
       //SerialUSB.print(rf95.lastRssi(), DEC);
@@ -131,13 +134,14 @@ void highDataRate(){
 void longRange(){
   SerialUSB.println("Long Range Mode");
   rf95.sleep();
-  rf95.setSignalBandwidth(25000);
+  rf95.setSignalBandwidth(40000); //decreasing BW increases link budget but decreases max crystal tolerance
   rf95.setSpreadingFactor(10);
-  rf95.setCodingRate4(7);
+  rf95.setCodingRate4(4);
   rf95.available();
 }
 
 void updateMode(){
+  safeModeTimer = millis();
   bool upd = 0;
   if(safeMode == 2){
     longRange();
@@ -153,6 +157,14 @@ void updateMode(){
     highDataRate();
     safeMode++;
     upd = 1;
+  }
+}
+
+void checkSafeMode(){
+  if (millis() - safeModeTimer > 60000){
+    SerialUSB.println("Timeout entering Safe Transmission");
+    safeTransmission();
+    safeModeTimer = millis();
   }
 }
 

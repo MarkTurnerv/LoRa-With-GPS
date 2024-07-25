@@ -62,6 +62,7 @@ uint8_t len = sizeof(buf);
 void setup()
 {
   safeTransmission();
+  //longRange();
   pinMode(LED, OUTPUT);
 
   SerialUSB.begin(9600);
@@ -128,7 +129,7 @@ void loop()
         satCntUpd = 1;
       }
       if(locUpd && altUpd){
-      updateMode();
+        updateMode();
         locUpd = 0;
         altUpd = 0;
         satCntUpd = 0;
@@ -153,11 +154,11 @@ void loop()
         rf95.waitPacketSent();
         //checkCmd();
         // Now wait for a reply 
-        /*  commented out waiting for reply so the transmitter continuously sends GPS data regardless of whether it is recieved
+          //commented out waiting for reply so the transmitter continuously sends GPS data regardless of whether it is recieved
         byte buf[RH_RF95_MAX_MESSAGE_LEN];
         byte len = sizeof(buf);
 
-        if (rf95.waitAvailableTimeout(2000)) {
+        if (rf95.waitAvailableTimeout(10000)) {
           // Should be a reply message for us now
           if (rf95.recv(buf, &len)) {
             SerialUSB.print("Got reply: ");
@@ -171,11 +172,11 @@ void loop()
         }
         else {
           SerialUSB.println("No reply, is the receiver running?");
-        }*/
+        }
       }
       else {
         if(locUpd || altUpd) {  //error message if either the location or altitude has been updated but the other has not
-          if(millis() - timeout > 5000){  //if last complete update was longer than 5 seconds ago
+          if(millis() - timeout > 15000){  //if last complete update was longer than 15 seconds ago
             timeout = millis();
             GPSreceivingTimeout = millis();
             const char *timeoutSend;
@@ -220,7 +221,7 @@ void loop()
   
   else {
     //checkCmd();
-    if (millis()-GPSreceivingTimeout > 5000) {    //if GPS reciever has not received any updates in 8 seconds
+    if (millis()-GPSreceivingTimeout > 30000) {    //if GPS reciever has not sent any updates over LoRa in 30 seconds
       updateMode();
       timeout = millis();
       GPSreceivingTimeout = millis();
@@ -230,7 +231,7 @@ void loop()
       rf95.waitPacketSent();
 
       // Now wait for a reply
-      if (rf95.waitAvailableTimeout(10000)) {
+      if (rf95.waitAvailableTimeout(20000)) {
         // Should be a reply message for us now
         if (rf95.recv(buf, &len)) {
           String BUF = (char*)buf;
@@ -273,7 +274,7 @@ void highDataRate(){
 void longRange(){
   SerialUSB.println("Long Range Mode");
   rf95.sleep();
-  rf95.setSignalBandwidth(25000);
+  rf95.setSignalBandwidth(40000);
   rf95.setSpreadingFactor(10);
   rf95.setCodingRate4(7);
   rf95.available();
