@@ -1,3 +1,5 @@
+//comment out all extraneous SerialUSB communication if saving to txt file with GPSfileSaver.py
+
 #include <SPI.h>
 //#include "CommandLineInterface.h"
 //Radio Head Library: 
@@ -24,8 +26,7 @@ int safeModeTimer = 0;
 
 void setup()
 {
-  safeTransmission();
-  //longRange();
+  safeTransmission(); //initialize server to safeTransmission mode
   pinMode(LED, OUTPUT);
 
   SerialUSB.begin(9600);
@@ -55,7 +56,7 @@ void setup()
  // The default transmitter power is 13dBm, using PA_BOOST.
  // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then 
  // you can set transmitter powers from 5 to 23 dBm:
- // rf95.setTxPower(14, false);
+  rf95.setTxPower(21, false);
 }
 
 void loop()
@@ -101,10 +102,10 @@ void loop()
         //SerialUSB.println("Sent a reply");
         digitalWrite(LED, LOW); //Turn off status LED
       }
-    updateMode();
+    updateMode(); //switch between the 3 transmission modes after each successful reception and ack
     }
     else 
-      SerialUSB.println("Recieve failed");
+      SerialUSB.println("Receive failed");
   }
   //Turn off status LED if we haven't received a packet after 1s
   if(millis() - timeSinceLastPacket > 1000){
@@ -113,7 +114,7 @@ void loop()
   }
 }
 
-void safeTransmission(){
+void safeTransmission(){ //define transmission mode that minimizes chance of data being corrupted
   SerialUSB.println("Safe Transmission Mode");
   rf95.sleep();
   rf95.setSignalBandwidth(125000); //62.5kHz, see RH_RF95.h for documentation
@@ -122,7 +123,7 @@ void safeTransmission(){
   rf95.available();
 }
 
-void highDataRate(){
+void highDataRate(){  //define transmission mode that can send the largest amount of data
   SerialUSB.println("High Data Mode");
   rf95.sleep();
   rf95.setSignalBandwidth(250000); //125kHz, see RH_RF95.h for documentation
@@ -131,7 +132,7 @@ void highDataRate(){
   rf95.available();
 }
 
-void longRange(){
+void longRange(){ //define transmission mode that can send the data over the longest range
   SerialUSB.println("Long Range Mode");
   rf95.sleep();
   rf95.setSignalBandwidth(40000); //decreasing BW increases link budget but decreases max crystal tolerance
@@ -140,7 +141,7 @@ void longRange(){
   rf95.available();
 }
 
-void updateMode(){
+void updateMode(){  //switch between each of the three modes after each successful reception
   safeModeTimer = millis();
   bool upd = 0;
   if(safeMode == 2){
@@ -160,7 +161,8 @@ void updateMode(){
   }
 }
 
-void checkSafeMode(){
+void checkSafeMode(){ //if no client transmissions are successfully recieved within a minute (two cycles 
+  //through each of the modes) switch to safeTransmission mode to maximize chance of receiving a signal
   if (millis() - safeModeTimer > 60000){
     SerialUSB.println("Timeout entering Safe Transmission");
     safeTransmission();
@@ -168,7 +170,7 @@ void checkSafeMode(){
   }
 }
 
-void checkForCmd() {
+void checkForCmd() {  //check serialUSB for user commands
   if (SerialUSB.available()) {
    char DEBUG_Char = SerialUSB.read();
    
@@ -190,11 +192,12 @@ void parseCommand(String commandToParse) {
    * #safeTrans - enter safeTransmission mode
    * #HDR - enter HighDataRate
    * #sleep  - puts LoRa radio client and server to sleep
-   * #setBW, - Sets LoRa client and server bandwidth
-   * #setSF, - toggles to cummulative defined bins
-   * #setCR, float - set a new pump speed
-   * #send - send characters
-   * #clear - clear saved pump settings
+   * #setBW,[int] - Sets LoRa client and server bandwidth
+   * #setSF,[int] - Sets LoRa client and server spreading factor
+   * #setCR,[int] - Sets LoRa client and server coding ratio
+   * #send - send all characters entered into the Serial Monitor port
+   * #setSerBW - sets the bandwidth of just the server side (used to re-establish connection
+                  if client changes to a known bandwidth)
    */
   
   char * strtokIndx; // this is used by strtok() as an index

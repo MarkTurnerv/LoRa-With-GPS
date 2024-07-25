@@ -2,6 +2,7 @@
 LoRa GPS transmitter
 Created: 7/10/2024
 Author: Mark Turner
+To be used with RadioServer_withGPS.ino
 Based off example from SparkFun:
 https://learn.sparkfun.com/tutorials/sparkfun-samd21-pro-rf-hookup-guide/point-to-point-radio-arduino-examples
 Which is in turn based off rf95 examples from PaulStoffregen RadioHead
@@ -51,9 +52,9 @@ bool altUpd = 0;
 bool satCntUpd = 0;
 int timeout=0;    //timeout check for if only part of satellite data is updated within 5 seconds
 int GPSreceivingTimeout = 0;    //timeout check for if no satellite data is updated within 8 seconds
-int safeMode = 1;
-uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
-uint8_t len = sizeof(buf);
+int safeMode = 1;   //set the initial transmission mode tracker to safe mode
+uint8_t buf[RH_RF95_MAX_MESSAGE_LEN]; //buffer to receive general transmissions
+uint8_t len = sizeof(buf);    // size of general receive buffer
 
 //Teensy setup
 //int pinLoRaPower = ;
@@ -61,12 +62,11 @@ uint8_t len = sizeof(buf);
 
 void setup()
 {
-  safeTransmission();
-  //longRange();
+  safeTransmission(); //initialize client to safeTransmission mode
   pinMode(LED, OUTPUT);
 
-  SerialUSB.begin(9600);
-  Serial1.begin(9600);
+  SerialUSB.begin(9600);  //Serial port to talk to laptop
+  Serial1.begin(9600);  //Serial port to talk to SAMD21
   // It may be difficult to read serial messages on startup. The following line
   // will wait for serial to be ready before continuing. Comment out if not needed.
   //while(!SerialUSB); 
@@ -97,7 +97,7 @@ void setup()
    // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then 
    // you can set transmitter powers from 5 to 23 dBm:
    // Transmitter power can range from 14-20dbm.
-   rf95.setTxPower(23, false);
+   rf95.setTxPower(21, false);
 
    //send header (can be saved on receiving end using GPSfileSaver.py)
    uint8_t initSend[] = "Date, Time, SatelliteCount, Latitude, Longitude, Speed (kmph), Altitude (m), SNR";
@@ -109,13 +109,7 @@ void setup()
 
 void loop()
 {
-  //checkCmd();
-  /*if(safeMode){
-    safeTransmission();
-  }*
-  else if (safeMode ==0){
-    highDataRate();
-  }*/
+  //checkCmd(); #check if user command was sent from server
   if(Serial1.available()) {
     if(gps.encode(Serial1.read())) {
       //checkCmd();
@@ -128,8 +122,8 @@ void loop()
       if(gps.satellites.isUpdated()) {  //check if number of available satellites has been updated since last loop
         satCntUpd = 1;
       }
-      if(locUpd && altUpd){
-        updateMode();
+      if(locUpd && altUpd){ //Send GPS data when location and altitude are both updated
+        updateMode(); //switch transmission modes
         locUpd = 0;
         altUpd = 0;
         satCntUpd = 0;
@@ -137,11 +131,9 @@ void loop()
         GPSreceivingTimeout = millis();
         
         //Send a message to the other radio
-        snprintf(GPStransmit,maxCharLen, "%d/%d/%d %02d:%02d:%02d SC:%d lat:%.6f lon:%.6f Sp:%.5f Alt:%.1f",
+        snprintf(GPStransmit,maxCharLen, "%d/%d/%d %02d:%02d:%02d SC:%d lat:%.6f lon:%.6f Sp:%.5f Alt:%.1f",  //save message in c-string
         gps.date.month(),gps.date.day(),gps.date.year(),gps.time.hour(),gps.time.minute(),gps.time.second(),gps.satellites.value(),
-        gps.location.lat(),
-        gps.location.lng(),
-        gps.speed.kmph(),gps.altitude.meters());
+        gps.location.lat(),gps.location.lng(),gps.speed.kmph(),gps.altitude.meters());
         SerialUSB.print("Sending message: ");
         SerialUSB.println(GPStransmit);
         sendLen = strlen(GPStransmit);
@@ -208,7 +200,7 @@ void loop()
               SerialUSB.print("Sending message: ");
               SerialUSB.println(GPStransmit);
               sendLen = strlen(GPStransmit);
-              rf95.send((uint8_t *) GPStransmit, sendLen+1);
+              rf95.send((uint8_t *) GPStransmit, sendLen+1);  //send (partially updated) GPS data
               memset(GPStransmit, 0, sendLen);
               rf95.waitPacketSent();
               //checkCmd();
@@ -253,7 +245,7 @@ void loop()
 }
 
 
-void safeTransmission(){
+void safeTransmission(){ //define transmission mode that minimizes chance of data being corrupted
   SerialUSB.println("Safe Transmission Mode");
   rf95.sleep();
   rf95.setSignalBandwidth(125000); //62.5kHz, see RH_RF95.h for documentation
@@ -262,7 +254,7 @@ void safeTransmission(){
   rf95.available();
 }
 
-void highDataRate(){
+void highDataRate(){  //define transmission mode that can send the largest amount of data
   SerialUSB.println("High Data Mode");
   rf95.sleep();
   rf95.setSignalBandwidth(250000); //125kHz, see RH_RF95.h for documentation
@@ -271,16 +263,16 @@ void highDataRate(){
   rf95.available();
 }
 
-void longRange(){
+void longRange(){ //define transmission mode that can send the data over the longest range
   SerialUSB.println("Long Range Mode");
   rf95.sleep();
-  rf95.setSignalBandwidth(40000);
+  rf95.setSignalBandwidth(40000); //decreasing BW increases link budget but decreases max crystal tolerance
   rf95.setSpreadingFactor(10);
   rf95.setCodingRate4(7);
   rf95.available();
 }
 
-void updateMode(){
+void updateMode(){  //switch between each of the three modes after every transmission
   bool upd = 0;
   if(safeMode == 2){
     longRange();
@@ -298,10 +290,8 @@ void updateMode(){
     upd = 1;
   }
 }
-//set interrupt upon receiving message (so also limit # of server messages sent)
-//set commands to change freq, ^, sleepmode
 
-void checkCmd(){
+void checkCmd(){  //check if client has recieved any user commands from server
   SerialUSB.println("checking for Cmd");
   if (rf95.waitAvailableTimeout(2000)) {
     SerialUSB.println("checking for Cmd x2");
@@ -317,7 +307,7 @@ void checkCmd(){
   }
 }
 
-void cmdParse(String BUF){
+void cmdParse(String BUF){  //interpret the user command
   char * strtokIndx; // this is used by strtok() as an index
   int bufInt=0;
   char CommandArray[64];
@@ -357,7 +347,7 @@ void cmdParse(String BUF){
     SerialUSB.println(setMsg);
     byte cmdSendLen = strlen(setMsg);
     rf95.send((uint8_t *) setMsg, cmdSendLen+1);
-    memset(setMsg, 0, cmdSendLen);
+    memset(setMsg, NULL, cmdSendLen);
     rf95.waitPacketSent();
     rf95.setSignalBandwidth(bufInt);
   }
