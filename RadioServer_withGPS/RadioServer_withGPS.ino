@@ -17,12 +17,13 @@ long timeSinceLastPacket = 0; //Tracks the time stamp of last packet received
 // 868MHz.This works but it is unknown how well the radio configures to this frequency:
 //float frequency = 864.1;
 float frequency = 921.2;
-bool safeMode = 0;
+int safeMode = 1;
 char header[] = "Date, Time, SatelliteCount, Latitude, Longitude, Speed (kmph), Altitude (m), SNR";
 String DEBUG_Buff;  //buffer for the USB Serial monitor
 
 void setup()
 {
+  safeTransmission();
   pinMode(LED, OUTPUT);
 
   SerialUSB.begin(9600);
@@ -46,9 +47,9 @@ void setup()
   }
 
   rf95.setFrequency(frequency); 
-  rf95.setSignalBandwidth(65000); //62.5kHz, see RH_RF95.h for documentation
-  rf95.setSpreadingFactor(9);
-  rf95.setCodingRate4(8);
+  //rf95.setSignalBandwidth(65000); //62.5kHz, see RH_RF95.h for documentation
+  //rf95.setSpreadingFactor(9);
+  //rf95.setCodingRate4(8);
  // The default transmitter power is 13dBm, using PA_BOOST.
  // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then 
  // you can set transmitter powers from 5 to 23 dBm:
@@ -57,12 +58,6 @@ void setup()
 
 void loop()
 {
-  /*if(safeMode){
-  safeTransmission();
-  }
-  else if (safeMode ==0){
-    highDataRate();
-  }*/
   checkForCmd();
   if (rf95.available()){
     // Should be a message for us now
@@ -82,7 +77,7 @@ void loop()
 
       // Send a reply
       String BUF = (char*)buf;
-      if (BUF.equals("Waiting for GPS")) {
+      if (BUF.startsWith("Waiting for GPS")) {
         uint8_t toSend[] = "Ack Waiting for GPS"; 
         rf95.send(toSend, sizeof(toSend));
         rf95.waitPacketSent();
@@ -103,6 +98,7 @@ void loop()
         //SerialUSB.println("Sent a reply");
         digitalWrite(LED, LOW); //Turn off status LED
       }
+    updateMode();
     }
     else 
       SerialUSB.println("Recieve failed");
@@ -115,21 +111,49 @@ void loop()
 }
 
 void safeTransmission(){
+  SerialUSB.println("Safe Transmission Mode");
   rf95.sleep();
   rf95.setSignalBandwidth(125000); //62.5kHz, see RH_RF95.h for documentation
-  rf95.setSpreadingFactor(7);
+  rf95.setSpreadingFactor(9);
   rf95.setCodingRate4(8);
-  safeMode = 1;
   rf95.available();
 }
 
 void highDataRate(){
+  SerialUSB.println("High Data Mode");
   rf95.sleep();
-  rf95.setSignalBandwidth(125000); //125kHz, see RH_RF95.h for documentation
-  rf95.setSpreadingFactor(9);
+  rf95.setSignalBandwidth(250000); //125kHz, see RH_RF95.h for documentation
+  rf95.setSpreadingFactor(7);
   rf95.setCodingRate4(4);
-  safeMode = 0;
   rf95.available();
+}
+
+void longRange(){
+  SerialUSB.println("Long Range Mode");
+  rf95.sleep();
+  rf95.setSignalBandwidth(25000);
+  rf95.setSpreadingFactor(10);
+  rf95.setCodingRate4(7);
+  rf95.available();
+}
+
+void updateMode(){
+  bool upd = 0;
+  if(safeMode == 2){
+    longRange();
+    safeMode = 0;
+    upd = 1;
+  }
+  if(safeMode == 1 && upd == 0){
+    safeTransmission();
+    safeMode++;
+    upd = 1;
+  }
+  if(safeMode == 0 && upd == 0){
+    highDataRate();
+    safeMode++;
+    upd = 1;
+  }
 }
 
 void checkForCmd() {
@@ -246,12 +270,12 @@ void parseCommand(String commandToParse) {
     SerialUSB.print("Setting Bandwidth to: ");
     SerialUSB.print(int1); SerialUSB.println("Hz");
     char cmdMsg[64];
-    snprintf(cmdMsg,63, "Cmd: setBW,%d", int1);
+    snprintf(cmdMsg,64, "Cmd: setBW,%d", int1);
     SerialUSB.write(cmdMsg);
     int cmdSendLen = strlen(cmdMsg);
     rf95.send((uint8_t *) cmdMsg, cmdSendLen+1);
     rf95.waitPacketSent();
-    memset(cmdMsg, 0, cmdSendLen);
+    memset(cmdMsg, NULL, cmdSendLen);
     commandToParse = "";
     if (rf95.waitAvailableTimeout(2000)) {
       // Should be a reply message for us now
@@ -272,6 +296,7 @@ void parseCommand(String commandToParse) {
   }
   else if(commandToParse.startsWith("#setSF"))  //valid inputs: integer 6-12 (will limit to 6 or 12 if outside of range)
   {//Client becomes unresponsive at 6; do NOT set SF below 7
+  //max SF of 10 in North America (12 in Europe)
     commandToParse.toCharArray(CommandArray, 64); //copy the String() to a string
     strtokIndx = strtok(CommandArray,",");      // get the first part - the string we don't care about this
   

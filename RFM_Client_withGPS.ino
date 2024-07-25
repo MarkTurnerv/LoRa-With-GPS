@@ -51,7 +51,7 @@ bool altUpd = 0;
 bool satCntUpd = 0;
 int timeout=0;    //timeout check for if only part of satellite data is updated within 5 seconds
 int GPSreceivingTimeout = 0;    //timeout check for if no satellite data is updated within 8 seconds
-bool safeMode = 0;
+int safeMode = 1;
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
 uint8_t len = sizeof(buf);
 
@@ -61,6 +61,7 @@ uint8_t len = sizeof(buf);
 
 void setup()
 {
+  safeTransmission();
   pinMode(LED, OUTPUT);
 
   SerialUSB.begin(9600);
@@ -86,10 +87,10 @@ void setup()
 
   // Set frequency
   rf95.setFrequency(frequency);
-  rf95.setSignalBandwidth(65000); //62.5kHz, see RH_RF95.h for documentation
-  rf95.setSpreadingFactor(9);  //increasing SF increases range at cost of data transmission rate
+  //rf95.setSignalBandwidth(65000); //62.5kHz, see RH_RF95.h for documentation
+  //rf95.setSpreadingFactor(9);  //increasing SF increases range at cost of data transmission rate
   //at SF=11 server drops half of the messages when sending at maximum speed (~2-3 sec/transmission)
-  rf95.setCodingRate4(8);
+  //rf95.setCodingRate4(8);
 
    // The default transmitter power is 13dBm, using PA_BOOST.
    // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then 
@@ -116,7 +117,7 @@ void loop()
   }*/
   if(Serial1.available()) {
     if(gps.encode(Serial1.read())) {
-      checkCmd();
+      //checkCmd();
       if(gps.location.isUpdated()) {  //check if location data has been updated since last loop
         locUpd = 1;
       }
@@ -127,6 +128,7 @@ void loop()
         satCntUpd = 1;
       }
       if(locUpd && altUpd){
+      updateMode();
         locUpd = 0;
         altUpd = 0;
         satCntUpd = 0;
@@ -149,7 +151,7 @@ void loop()
         //GPStransmit[0] = { 0 };
         memset(GPStransmit, 0, sendLen);
         rf95.waitPacketSent();
-        checkCmd();
+        //checkCmd();
         // Now wait for a reply 
         /*  commented out waiting for reply so the transmitter continuously sends GPS data regardless of whether it is recieved
         byte buf[RH_RF95_MAX_MESSAGE_LEN];
@@ -208,7 +210,7 @@ void loop()
               rf95.send((uint8_t *) GPStransmit, sendLen+1);
               memset(GPStransmit, 0, sendLen);
               rf95.waitPacketSent();
-              checkCmd();
+              //checkCmd();
             }
           }
         }
@@ -217,8 +219,9 @@ void loop()
   }
   
   else {
-    checkCmd();
-    if (millis()-GPSreceivingTimeout > 8000) {    //if GPS reciever has not received any updates in 8 seconds
+    //checkCmd();
+    if (millis()-GPSreceivingTimeout > 5000) {    //if GPS reciever has not received any updates in 8 seconds
+      updateMode();
       timeout = millis();
       GPSreceivingTimeout = millis();
       SerialUSB.print("Sending wait message: ");
@@ -227,7 +230,7 @@ void loop()
       rf95.waitPacketSent();
 
       // Now wait for a reply
-      if (rf95.waitAvailableTimeout(2000)) {
+      if (rf95.waitAvailableTimeout(10000)) {
         // Should be a reply message for us now
         if (rf95.recv(buf, &len)) {
           String BUF = (char*)buf;
@@ -236,7 +239,6 @@ void loop()
           SerialUSB.println(BUF);
           //SerialUSB.print(" RSSI: ");
           //SerialUSB.print(rf95.lastRssi(), DEC);
-
         }
         else {
           SerialUSB.println("Receive failed");
@@ -251,19 +253,49 @@ void loop()
 
 
 void safeTransmission(){
+  SerialUSB.println("Safe Transmission Mode");
   rf95.sleep();
-  rf95.setSignalBandwidth(62500); //62.5kHz, see RH_RF95.h for documentation
-  rf95.setSpreadingFactor(7);
+  rf95.setSignalBandwidth(125000); //62.5kHz, see RH_RF95.h for documentation
+  rf95.setSpreadingFactor(9);
   rf95.setCodingRate4(8);
-  safeMode = 1;
+  rf95.available();
 }
 
 void highDataRate(){
+  SerialUSB.println("High Data Mode");
   rf95.sleep();
-  rf95.setSignalBandwidth(125000); //125kHz, see RH_RF95.h for documentation
-  rf95.setSpreadingFactor(9);
+  rf95.setSignalBandwidth(250000); //125kHz, see RH_RF95.h for documentation
+  rf95.setSpreadingFactor(7);
   rf95.setCodingRate4(4);
-  safeMode = 0;
+  rf95.available();
+}
+
+void longRange(){
+  SerialUSB.println("Long Range Mode");
+  rf95.sleep();
+  rf95.setSignalBandwidth(25000);
+  rf95.setSpreadingFactor(10);
+  rf95.setCodingRate4(7);
+  rf95.available();
+}
+
+void updateMode(){
+  bool upd = 0;
+  if(safeMode == 2){
+    longRange();
+    safeMode = 0;
+    upd = 1;
+  }
+  if(safeMode == 1 && upd == 0){
+    safeTransmission();
+    safeMode++;
+    upd = 1;
+  }
+  if(safeMode == 0 && upd == 0){
+    highDataRate();
+    safeMode++;
+    upd = 1;
+  }
 }
 //set interrupt upon receiving message (so also limit # of server messages sent)
 //set commands to change freq, ^, sleepmode
@@ -297,7 +329,7 @@ void cmdParse(String BUF){
   }
   if (BUF.startsWith("Cmd: HDR")){
     highDataRate();
-    uint8_t waitMessageSend[] = "Client Entering Sleep Mode";
+    uint8_t waitMessageSend[] = "Client Entering High Data Rate Mode";
      rf95.send(waitMessageSend, sizeof(waitMessageSend));
     rf95.waitPacketSent();
     rf95.sleep();
@@ -316,7 +348,7 @@ void cmdParse(String BUF){
     strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
     bufInt = atoi(strtokIndx);     // convert this part to a int for the bandwidth
     if (bufInt < 25000){
-      bufInt = 25000;
+      bufInt = 125000;
     }
     char setMsg[maxCharLen];
     snprintf(setMsg,maxCharLen, "Bandwidth set:%d", bufInt);
