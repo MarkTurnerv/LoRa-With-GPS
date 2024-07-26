@@ -13,12 +13,10 @@ https://github.com/PaulStoffregen/RadioHead/tree/master/examples/rf95
 RadioHead refrence: https://www.airspayce.com/mikem/arduino/RadioHead/classRHGenericDriver.html#a9269fb2eddfaa055c31769619d808dbe
 
 To do:
-  remove unnecessary GPS transmissions?
   test different transmitter powers
   increase C/R, increase Spreading Factor, minimize? Bandwidth
   https://medium.com/home-wireless/testing-lora-radios-with-the-limesdr-mini-part-2-37fa481217ff
 
-  Both the TX and RX ProRF boards will need a wire antenna. We recommend a 3" piece of wire.
 */
 
 #include <SPI.h>
@@ -27,9 +25,15 @@ To do:
 #include <RH_RF95.h> 
 #include "TinyGPS++.h"
 
+//Teensy setup
+int pinLoRaCS = 10; //SPI chip select pin for LoRa radio
+int pinLoRaCOPI = 11;   //Controller out Peripheral in (formerly MoSI)
+int pinLoRaCIPO = 12; //Controller out Peripheral in (formerly MISO)
+int pinLoRaINT = 14;
+
 // We need to provide the RFM95 module's chip select and interrupt pins to the
 // rf95 instance below.On the SparkFun ProRF those pins are 12 and 6 respectively.
-RH_RF95 rf95(12, 6);
+RH_RF95 rf95(pinLoRaCS, pinLoRaINT);
 
 int LED = 13; //Status LED is on pin 13
 
@@ -56,8 +60,7 @@ int safeMode = 1;   //set the initial transmission mode tracker to safe mode
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN]; //buffer to receive general transmissions
 uint8_t len = sizeof(buf);    // size of general receive buffer
 
-//Teensy setup
-//int pinLoRaPower = ;
+
 
 
 void setup()

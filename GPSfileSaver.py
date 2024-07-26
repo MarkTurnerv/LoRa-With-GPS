@@ -104,6 +104,7 @@ while True:
     GPSstring = GPSstring.replace(' lon:',' ')
     GPSstring = GPSstring.replace(' Sp:',' ')
     GPSstring = GPSstring.replace(' Alt:',' ')
+    GPSstring = GPSstring.replace(' SNR:',' ')
     GPSstring = GPSstring.replace(',',' ')
     GPSstring.strip()
     '''checkNumeric = GPSstring.split()

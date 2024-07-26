@@ -23,6 +23,7 @@ int safeMode = 1;
 char header[] = "Date, Time, SatelliteCount, Latitude, Longitude, Speed (kmph), Altitude (m), SNR";
 String DEBUG_Buff;  //buffer for the USB Serial monitor
 int safeModeTimer = 0;
+int safeModeTimout = 0;  //Used to track whether tranceiver has entered safemode because of timeout
 
 void setup()
 {
@@ -71,7 +72,7 @@ void loop()
     if (rf95.recv(buf, &len)){
       digitalWrite(LED, HIGH); //Turn on status LED
       timeSinceLastPacket = millis(); //Timestamp this packet
-
+      safeModeTimeout = 0;
       //SerialUSB.print("Received message: ");
       SerialUSB.print((char*)buf); SerialUSB.print(" SNR:");
       SerialUSB.println(rf95.lastSNR());
@@ -163,10 +164,17 @@ void updateMode(){  //switch between each of the three modes after each successf
 
 void checkSafeMode(){ //if no client transmissions are successfully recieved within a minute (two cycles 
   //through each of the modes) switch to safeTransmission mode to maximize chance of receiving a signal
-  if (millis() - safeModeTimer > 60000){
+  if (millis() - safeModeTimer > 60000 && safeModeTimeout == 0){
     SerialUSB.println("Timeout entering Safe Transmission");
     safeTransmission();
     safeModeTimer = millis();
+    safeModeTimeout = 1;
+  }
+  else if (millis() - safeModeTimer > 60000 && safeModeTimeout == 1) {
+    SerialUSB.println("Timeout entering Long Range");
+    longRange();
+    safeModeTimer = millis();
+    safeModeTimeout = 0;
   }
 }
 
@@ -275,7 +283,7 @@ void parseCommand(String commandToParse) {
     rf95.sleep();
   }
   else if(commandToParse.startsWith("#setBW"))  //7800-250000
-  {
+  { //according to datasheet RFM95W supports BW from 7.8-500kHz; in testing it was losing signals below 25kHz
     commandToParse.toCharArray(CommandArray, 64); //copy the String() to a string
     strtokIndx = strtok(CommandArray,",");      // get the first part - the string we don't care about this
     SerialUSB.println(strtokIndx);
