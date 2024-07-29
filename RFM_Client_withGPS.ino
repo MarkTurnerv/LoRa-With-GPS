@@ -131,41 +131,14 @@ void loop()
         GPSreceivingTimeout = millis();
         
         //Send a message to the other radio
-        snprintf(GPStransmit,maxCharLen, "%d/%d/%d %02d:%02d:%02d SC:%d lat:%.6f lon:%.6f Sp:%.5f Alt:%.1f",  //save message in c-string
-        gps.date.month(),gps.date.day(),gps.date.year(),gps.time.hour(),gps.time.minute(),gps.time.second(),gps.satellites.value(),
-        gps.location.lat(),gps.location.lng(),gps.speed.kmph(),gps.altitude.meters());
-        SerialUSB.print("Sending message: ");
-        SerialUSB.println(GPStransmit);
-        sendLen = strlen(GPStransmit);
-        //sprintf(toSend, "Hi, my counter is: %d", packetCounter++);
-        //rf95.send((uint8_t *) toSend, sizeof(toSend));
-        rf95.send((uint8_t *) GPStransmit, sendLen+1);  //add 1 to length to include terminating character
-        
-        //GPStransmit[0] = { 0 };
-        memset(GPStransmit, 0, sendLen);
-        rf95.waitPacketSent();
+        sendGPS(); //Send GPS packet over LoRa
         //checkCmd();
         // Now wait for a reply 
           //commented out waiting for reply so the transmitter continuously sends GPS data regardless of whether it is recieved
         byte buf[RH_RF95_MAX_MESSAGE_LEN];
         byte len = sizeof(buf);
 
-        if (rf95.waitAvailableTimeout(10000)) {
-          // Should be a reply message for us now
-          if (rf95.recv(buf, &len)) {
-            SerialUSB.print("Got reply: ");
-            SerialUSB.println((char*)buf);
-            SerialUSB.print(" SNR:"); SerialUSB.println(rf95.lastSNR());
-            //SerialUSB.print(" RSSI: ");
-            //SerialUSB.print(rf95.lastRssi(), DEC);
-          }
-          else {
-            SerialUSB.println("Receive failed");
-          }
-        }
-        else {
-          SerialUSB.println("No reply, is the receiver running?");
-        }
+        getLoRaReply();
       }
       else {
         if(locUpd || altUpd) {  //error message if either the location or altitude has been updated but the other has not
@@ -195,15 +168,7 @@ void loop()
               rf95.waitPacketSent();
               delay(250);
               //send GPS data
-              snprintf(GPStransmit,maxCharLen, "%d/%d/%d %02d:%02d:%02d SC:%d lat:%.6f lon:%.6f Sp:%.5f Alt:%.1f ",
-              gps.date.month(),gps.date.day(),gps.date.year(),gps.time.hour(),gps.time.minute(),gps.time.second(),gps.satellites.value(),
-              gps.location.lat(), gps.location.lng(), gps.speed.kmph(),gps.altitude.meters());
-              SerialUSB.print("Sending message: ");
-              SerialUSB.println(GPStransmit);
-              sendLen = strlen(GPStransmit);
-              rf95.send((uint8_t *) GPStransmit, sendLen+1);  //send (partially updated) GPS data
-              memset(GPStransmit, 0, sendLen);
-              rf95.waitPacketSent();
+              sendGPS();
               //checkCmd();
             }
           }
@@ -305,6 +270,38 @@ void checkCmd(){  //check if client has recieved any user commands from server
         cmdParse(BUF);
       }
     }
+  }
+}
+
+void sendGPS(){ //Send GPS packet over LoRa
+  snprintf(GPStransmit,maxCharLen, "%d/%d/%d %02d:%02d:%02d SC:%lu lat:%.6f lon:%.6f Sp:%.5f Alt:%.1f",  //save message in c-string
+  gps.date.month(),gps.date.day(),gps.date.year(),gps.time.hour(),gps.time.minute(),gps.time.second(),gps.satellites.value(),
+  gps.location.lat(),gps.location.lng(),gps.speed.kmph(),gps.altitude.meters());
+  SerialUSB.print("Sending message: ");
+  SerialUSB.println(GPStransmit);
+  sendLen = strlen(GPStransmit);
+  rf95.send((uint8_t *) GPStransmit, sendLen+1);  //add 1 to length to include terminating character
+  memset(GPStransmit, 0, sendLen);
+  rf95.waitPacketSent();
+}
+
+void getLoRaReply(){  //Get reply from LoRa server
+  byte buf[RH_RF95_MAX_MESSAGE_LEN];
+  byte len = sizeof(buf);
+  if (rf95.waitAvailableTimeout(10000)) {
+    if (rf95.recv(buf, &len)) {
+      SerialUSB.print("Got reply: ");
+      SerialUSB.println((char*)buf);
+      SerialUSB.print(" SNR:"); SerialUSB.println(rf95.lastSNR());
+      SerialUSB.print(" RSSI:");
+      SerialUSB.print(rf95.lastRssi(), DEC);
+    }
+    else {
+      SerialUSB.println("Receive failed");
+    }
+  }
+  else {
+    SerialUSB.println("No reply, is the receiver running?");
   }
 }
 
