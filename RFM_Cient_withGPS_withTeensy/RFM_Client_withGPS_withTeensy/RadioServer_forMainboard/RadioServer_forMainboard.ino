@@ -83,27 +83,31 @@ void loop()
       // Send a reply
       String BUF = (char*)buf;
       if (BUF.startsWith("Waiting for GPS")) {
-        uint8_t toSend[] = "Ack Waiting for GPS"; 
+        uint8_t toSend[] = "Ack Waiting for GPS";
         rf95.send(toSend, sizeof(toSend));
         rf95.waitPacketSent();
         //SerialUSB.println("Sent a reply");
         digitalWrite(LED, LOW); //Turn off status LED
+        memset(toSend, 0, sizeof(toSend));
       }
       if (BUF.equals("Satellite Count not updated") || BUF.equals("GPS Altitude not updated") || BUF.equals("GPS Location not updated") || BUF.equals("System Timeout")) {
-        uint8_t toSend[] = "Ack Partial Packet Update"; 
+        uint8_t toSend[] = "Ack Partial Packet Update";
         rf95.send(toSend, sizeof(toSend));
         rf95.waitPacketSent();
         //SerialUSB.println("Sent a reply");
         digitalWrite(LED, LOW); //Turn off status LED
+        memset(toSend, 0, sizeof(toSend));
       }
       else{
-        uint8_t toSend[] = "Data Recieved"; 
+        uint8_t toSend[] = "Data Recieved";
         rf95.send(toSend, sizeof(toSend));
         rf95.waitPacketSent();
         //SerialUSB.println("Sent a reply");
         digitalWrite(LED, LOW); //Turn off status LED
+        memset(toSend, 0, sizeof(toSend));
       }
-    updateMode(); //switch between the 3 transmission modes after each successful reception and ack
+
+      updateMode(); //switch between the 3 transmission modes after each successful reception and ack
     }
     else 
       SerialUSB.println("Receive failed");
@@ -113,6 +117,27 @@ void loop()
     digitalWrite(LED, LOW); //Turn off status LED
     timeSinceLastPacket = millis(); //Don't write LED but every 1s
   }
+}
+
+bool receiveLoRa(){
+  bool received = 0;
+  if (rf95.waitAvailableTimeout(2000)) {
+    // Should be a reply message for us now
+    uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
+    uint8_t len = sizeof(buf);
+    if (rf95.recv(buf, &len)) {
+      SerialUSB.print("Got reply: ");
+      SerialUSB.println((char*)buf);
+      received = 1;
+    }
+    else {
+      SerialUSB.println("Receive failed");
+    }
+  }
+  else {
+    SerialUSB.println("No reply, is the receiver running?");
+  }
+  return received;
 }
 
 void safeTransmission(){ //define transmission mode that minimizes chance of data being corrupted
@@ -206,81 +231,45 @@ void parseCommand(String commandToParse) {
    * #send - send all characters entered into the Serial Monitor port
    * #setSerBW - sets the bandwidth of just the server side (used to re-establish connection
                   if client changes to a known bandwidth)
+   * #RS41On - Turn RS41 power on
+   * #RS41Off - Turn RS41 power off
    */
   
   char * strtokIndx; // this is used by strtok() as an index
   char CommandArray[64];
 
   int int1 = 0;
+  bool received = 0;
 
   if(commandToParse.startsWith("#header"))
   {
      SerialUSB.println(header);  
   }
   else if(commandToParse.startsWith("#safeTrans")) {
-      uint8_t toSend[] = "Cmd: safeTrans";
-      rf95.send(toSend, sizeof(toSend)+1);
-      rf95.waitPacketSent();
-      if (rf95.waitAvailableTimeout(2000)) {
-      // Should be a reply message for us now
-      uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
-      uint8_t len = sizeof(buf);
-      if (rf95.recv(buf, &len)) {
-        SerialUSB.print("Got reply: ");
-        SerialUSB.println((char*)buf);
-        safeTransmission();
-      }
-      else {
-        SerialUSB.println("Receive failed");
-      }
-    }
-    else {
-      SerialUSB.println("No reply, is the receiver running?");
-    }
-    rf95.sleep();
+    uint8_t toSend[] = "Cmd: safeTrans";
+    rf95.send(toSend, sizeof(toSend)+1);
+    rf95.waitPacketSent();
+    memset(toSend, 0, sizeof(toSend));
+    commandToParse = "";
+    received = receiveLoRa();
   }
   else if(commandToParse.startsWith("#HDR")) {
-      uint8_t toSend[] = "Cmd: HDR";
-      rf95.send(toSend, sizeof(toSend)+1);
-      rf95.waitPacketSent();
-      highDataRate();
-      if (rf95.waitAvailableTimeout(2000)) {
-      // Should be a reply message for us now
-      uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
-      uint8_t len = sizeof(buf);
-      if (rf95.recv(buf, &len)) {
-        SerialUSB.print("Got reply: ");
-        SerialUSB.println((char*)buf);
-      }
-      else {
-        SerialUSB.println("Receive failed");
-      }
-    }
-    else {
-      SerialUSB.println("No reply, is the receiver running?");
-    }
-    rf95.sleep();
+    uint8_t toSend[] = "Cmd: HDR";
+    rf95.send(toSend, sizeof(toSend)+1);
+    rf95.waitPacketSent();
+    memset(toSend, 0, sizeof(toSend));
+    commandToParse = "";
+    received = receiveLoRa();
+    if (received) {highDataRate();}
   }
   else if(commandToParse.startsWith("#sleep")) {
-      uint8_t toSend[] = "Cmd: sleep";
-      rf95.send(toSend, sizeof(toSend)+1);
-      rf95.waitPacketSent();
-      if (rf95.waitAvailableTimeout(2000)) {
-      // Should be a reply message for us now
-      uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
-      uint8_t len = sizeof(buf);
-      if (rf95.recv(buf, &len)) {
-        SerialUSB.print("Got reply: ");
-        SerialUSB.println((char*)buf);
-      }
-      else {
-        SerialUSB.println("Receive failed");
-      }
-    }
-    else {
-      SerialUSB.println("No reply, is the receiver running?");
-    }
-    rf95.sleep();
+    uint8_t toSend[] = "Cmd: sleep";
+    rf95.send(toSend, sizeof(toSend)+1);
+    rf95.waitPacketSent();
+    memset(toSend, 0, sizeof(toSend));
+    commandToParse = "";
+    received = receiveLoRa();
+    if (received){rf95.sleep();}
   }
   else if(commandToParse.startsWith("#setBW"))  //7800-250000
   { //according to datasheet RFM95W supports BW from 7.8-500kHz; in testing it was losing signals below 25kHz
@@ -298,24 +287,10 @@ void parseCommand(String commandToParse) {
     int cmdSendLen = strlen(cmdMsg);
     rf95.send((uint8_t *) cmdMsg, cmdSendLen+1);
     rf95.waitPacketSent();
-    memset(cmdMsg, NULL, cmdSendLen);
+    memset(cmdMsg, 0, cmdSendLen);
     commandToParse = "";
-    if (rf95.waitAvailableTimeout(2000)) {
-      // Should be a reply message for us now
-      uint8_t cmdBuf[RH_RF95_MAX_MESSAGE_LEN];
-      uint8_t cmdLen = sizeof(cmdBuf);
-      if (rf95.recv(cmdBuf, &cmdLen)) {
-        SerialUSB.print("Got reply: ");
-        SerialUSB.println((char*)cmdBuf);
-        rf95.setSignalBandwidth(int1);
-      }
-      else {
-        SerialUSB.println("Receive failed");
-      }
-    }
-    else {
-      SerialUSB.println("No reply, is the receiver running?");
-    }
+    received = receiveLoRa();
+    if (received){rf95.setSignalBandwidth(int1);}
   }
   else if(commandToParse.startsWith("#setSF"))  //valid inputs: integer 6-12 (will limit to 6 or 12 if outside of range)
   {//Client becomes unresponsive at 6; do NOT set SF below 7
@@ -332,25 +307,11 @@ void parseCommand(String commandToParse) {
     snprintf(cmdMsg,64, "Cmd: setSF,%d", int1);
     int cmdSendLen = strlen(cmdMsg);
     rf95.send((uint8_t *) cmdMsg, cmdSendLen+1);
+    rf95.waitPacketSent();
     memset(cmdMsg, 0, cmdSendLen);
     commandToParse = "";
-    rf95.waitPacketSent();
-    if (rf95.waitAvailableTimeout(2000)) {
-      // Should be a reply message for us now
-      uint8_t cmdBuf[RH_RF95_MAX_MESSAGE_LEN];
-      uint8_t cmdLen = sizeof(cmdBuf);
-      if (rf95.recv(cmdBuf, &cmdLen)) {
-        SerialUSB.print("Got reply: ");
-        SerialUSB.println((char*)cmdBuf);
-        rf95.setSpreadingFactor(int1);
-      }
-      else {
-        SerialUSB.println("Receive failed");
-      }
-    }
-    else {
-      SerialUSB.println("No reply, is the receiver running?");
-    }
+    received = receiveLoRa();
+    if (received){rf95.setSpreadingFactor(int1);}
   }
   else if(commandToParse.startsWith("#setCR"))  //Valid denominator values are 5, 6, 7 or 8.
   {
@@ -369,45 +330,21 @@ void parseCommand(String commandToParse) {
     memset(cmdMsg, 0, cmdSendLen);
     commandToParse = "";
     rf95.waitPacketSent();
-    if (rf95.waitAvailableTimeout(2000)) {
-      // Should be a reply message for us now
-      uint8_t cmdBuf[RH_RF95_MAX_MESSAGE_LEN];
-      uint8_t cmdLen = sizeof(cmdBuf);
-      if (rf95.recv(cmdBuf, &cmdLen)) {
-        SerialUSB.print("Got reply: ");
-        SerialUSB.println((char*)cmdBuf);
-        rf95.setCodingRate4(int1);
-      }
-      else {
-        SerialUSB.println("Receive failed");
-      }
-    }
-    else {
-      SerialUSB.println("No reply, is the receiver running?");
-    }
+    memset(cmdMsg, 0, cmdSendLen);
+    commandToParse = "";
+    received = receiveLoRa();
+    if (received){rf95.setCodingRate4(int1);}
   }
   else if (commandToParse.startsWith("#send")) {
     char sendMes[251];
     commandToParse.toCharArray(sendMes,251);
     SerialUSB.println(sendMes);
-    rf95.send((uint8_t*)sendMes, 251);
+    int mesSendLen = strlen(sendMes);
+    rf95.send((uint8_t*)sendMes, mesSendLen);
     rf95.waitPacketSent();
-        if (rf95.waitAvailableTimeout(2000)) {
-      // Should be a reply message for us now
-      uint8_t cmdBuf[RH_RF95_MAX_MESSAGE_LEN];
-      uint8_t cmdLen = sizeof(cmdBuf);
-      if (rf95.recv(cmdBuf, &cmdLen)) {
-        SerialUSB.print("Got reply: ");
-        SerialUSB.println((char*)cmdBuf);
-        rf95.setCodingRate4(int1);
-      }
-      else {
-        SerialUSB.println("Receive failed");
-      }
-    }
-    else {
-      SerialUSB.println("No reply, is the receiver running?");
-    }
+    memset(sendMes, 0, mesSendLen);
+    commandToParse = "";
+    received = receiveLoRa();
   }
   else if (commandToParse.startsWith("#setSerBW")){
     commandToParse.toCharArray(CommandArray, 64); //copy the String() to a string
@@ -418,4 +355,21 @@ void parseCommand(String commandToParse) {
     SerialUSB.print("Setting Server BW to: "); SerialUSB.println(int1);
     rf95.setSignalBandwidth(int1);
   }
+  else if (commandToParse.startsWith("#RS41On")){
+    uint8_t toSend[] = "Cmd: RS41On";
+    rf95.send(toSend, sizeof(toSend)+1);
+    rf95.waitPacketSent();
+    memset(toSend, 0, sizeof(toSend));
+    commandToParse = "";
+    received = receiveLoRa();
+  }
+  else if (commandToParse.startsWith("#RS41Off")){
+    uint8_t toSend[] = "Cmd: RS41Off";
+    rf95.send(toSend, sizeof(toSend)+1);
+    rf95.waitPacketSent();
+    memset(toSend, 0, sizeof(toSend));
+    commandToParse = "";
+    received = receiveLoRa();
+  }
 }
+

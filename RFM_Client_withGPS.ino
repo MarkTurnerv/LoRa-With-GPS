@@ -66,7 +66,7 @@ void setup()
   pinMode(LED, OUTPUT);
 
   SerialUSB.begin(9600);  //Serial port to talk to laptop
-  Serial1.begin(9600);  //Serial port to talk to SAMD21
+  Serial1.begin(9600);  //Serial port to talk to GPS data
   // It may be difficult to read serial messages on startup. The following line
   // will wait for serial to be ready before continuing. Comment out if not needed.
   //while(!SerialUSB); 
@@ -314,22 +314,19 @@ void cmdParse(String BUF){  //interpret the user command
     rf95.send(waitMessageSend, sizeof(waitMessageSend));
     rf95.waitPacketSent();
     safeTransmission();
-    return;
   }
   if (BUF.startsWith("Cmd: HDR")){
     highDataRate();
     uint8_t waitMessageSend[] = "Client Entering High Data Rate Mode";
-     rf95.send(waitMessageSend, sizeof(waitMessageSend));
+    rf95.send(waitMessageSend, sizeof(waitMessageSend));
     rf95.waitPacketSent();
-    rf95.sleep();
-    return;
+    highDataRate();
   }
   if (BUF.startsWith("Cmd: sleep")){
     uint8_t waitMessageSend[] = "Client Entering Sleep Mode";
      rf95.send(waitMessageSend, sizeof(waitMessageSend));
     rf95.waitPacketSent();
     rf95.sleep();
-    return;
   }
   if (BUF.startsWith("Cmd: setBW")){
     BUF.toCharArray(CommandArray, 64);

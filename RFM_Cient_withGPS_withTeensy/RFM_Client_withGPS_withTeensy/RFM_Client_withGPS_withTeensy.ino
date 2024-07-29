@@ -22,26 +22,26 @@ To do:
 //Radio Head Library:
 #include <RH_RF95.h> 
 #include "TinyGPS++.h"
-#include <RS41.h>
+//#include <RS41.h>
 
 #define GPSSERIAL Serial4
-#define TSENSERIAL Serial8
+//#define TSENSERIAL Serial8    //for ECU on Teensy 4.1
+#define TSENSERIAL Serial1  //for EFU_REVD on Teensy 3.6
+#define SerialUSB Serial
 
 //Teensy setup
-int pinLoRaCS = 10; //SPI chip select pin for LoRa radio
+//int pinLoRaCS = 10; //SPI chip select pin for LoRa radio on ECU
+int pinLoRaCS = 19; //SPI chip select pin for LoRa radio on EFU
 int pinLoRaCOPI = 11;   //Controller out Peripheral in (formerly MoSI)
 int pinLoRaCIPO = 12; //Controller out Peripheral in (formerly MISO)
-int pinLoRaINT = 14;
+int pinLoRaINT = 18;//for EFU, 14 for ECU
 int pinRS41_ENABLE = 36;
 
 // We need to provide the RFM95 module's chip select and interrupt pins to the
 // rf95 instance below.On the Teensy 4.1 those pins are 10 and 14 respectively.
 RH_RF95 rf95(pinLoRaCS, pinLoRaINT);
 
-RS41 rs41(Serial6);
-
-//No LED on ECU
-//int LED = 13; //Status LED is on pin 13
+//RS41 rs41(Serial6);
 
 //int packetCounter = 0; //Counts the number of packets sent
 //long timeSinceLastPacket = 0; //Tracks the time stamp of last packet received
@@ -72,9 +72,11 @@ uint8_t len = sizeof(buf);    // size of general receive buffer
 void setup()
 {
   safeTransmission(); //initialize client to safeTransmission mode
+  pinMode(LED_BUILTIN, OUTPUT);
 
   SerialUSB.begin(115200);  //Serial port to talk to laptop
   GPSSERIAL.begin(9600);
+  while(!SerialUSB); 
   SerialUSB.println("RFM Client!"); 
   pinMode(pinRS41_ENABLE,OUTPUT);
 
@@ -82,6 +84,14 @@ void setup()
   if (rf95.init() == false){
     SerialUSB.println("Radio Init Failed - Freezing");
     while (1);
+  }
+  else{
+    //An LED inidicator to let us know radio initialization has completed. 
+    SerialUSB.println("Transmitter up!"); 
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(500);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(500);
   }
 
   // Set frequency
@@ -108,8 +118,8 @@ void setup()
 void loop()
 {
   //checkCmd(); #check if user command was sent from server
-  if(Serial1.available()) {
-    if(gps.encode(Serial1.read())) {
+  if(GPSSERIAL.available()) {
+    if(gps.encode(GPSSERIAL.read())) {
       //checkCmd();
       if(gps.location.isUpdated()) {  //check if location data has been updated since last loop
         locUpd = 1;
@@ -307,22 +317,19 @@ void cmdParse(String BUF){  //interpret the user command
     rf95.send(waitMessageSend, sizeof(waitMessageSend));
     rf95.waitPacketSent();
     safeTransmission();
-    return;
   }
   if (BUF.startsWith("Cmd: HDR")){
     highDataRate();
     uint8_t waitMessageSend[] = "Client Entering High Data Rate Mode";
      rf95.send(waitMessageSend, sizeof(waitMessageSend));
     rf95.waitPacketSent();
-    rf95.sleep();
-    return;
+    highDataRate();
   }
   if (BUF.startsWith("Cmd: sleep")){
     uint8_t waitMessageSend[] = "Client Entering Sleep Mode";
-     rf95.send(waitMessageSend, sizeof(waitMessageSend));
+    rf95.send(waitMessageSend, sizeof(waitMessageSend));
     rf95.waitPacketSent();
     rf95.sleep();
-    return;
   }
   if (BUF.startsWith("Cmd: setBW")){
     BUF.toCharArray(CommandArray, 64);
@@ -365,8 +372,6 @@ void cmdParse(String BUF){  //interpret the user command
     SerialUSB.println(strtokIndx);
     strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
     bufInt = atoi(strtokIndx);     // convert this part to a int for the bandwidth
-    
-    rf95.setCodingRate4(bufInt);
     char setMsg[maxCharLen];
     snprintf(setMsg,maxCharLen, "Coding Ratio set:%d", bufInt);
     SerialUSB.print("Sending set message: ");
@@ -377,10 +382,16 @@ void cmdParse(String BUF){  //interpret the user command
     rf95.waitPacketSent();
     rf95.setCodingRate4(bufInt);
   }
-  if (BUF.startsWith("Cmd: RPOn")){ //Remote command to power RS41 on
+  if (BUF.startsWith("Cmd: RS41On")){ //Remote command to power RS41 on
     digitalWrite(pinRS41_ENABLE,HIGH);
+    uint8_t toSend[] = "RS41 powered off";
+    rf95.send(toSend, sizeof(toSend)+1);
+    rf95.waitPacketSent();
   }
-  if (BUF.startsWith("Cmd: RPOff")){ //Remote command to power RS41 off
+  if (BUF.startsWith("Cmd: RS41Off")){ //Remote command to power RS41 off
     digitalWrite(pinRS41_ENABLE,LOW);
+    uint8_t toSend[] = "RS41 powered off";
+    rf95.send(toSend, sizeof(toSend)+1);
+    rf95.waitPacketSent();
   }
 }
