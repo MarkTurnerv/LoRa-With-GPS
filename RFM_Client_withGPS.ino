@@ -196,8 +196,8 @@ void loop()
           SerialUSB.print("Got reply: ");
           
           SerialUSB.println(BUF);
-          //SerialUSB.print(" RSSI: ");
-          //SerialUSB.print(rf95.lastRssi(), DEC);
+          SerialUSB.print(" SNR:"); SerialUSB.println(rf95.lastSNR());
+          SerialUSB.print(" RSSI: "); SerialUSB.println(rf95.lastRssi(), DEC);
         }
         else {
           SerialUSB.println("Receive failed");
@@ -324,7 +324,7 @@ void cmdParse(String BUF){  //interpret the user command
   }
   if (BUF.startsWith("Cmd: sleep")){
     uint8_t waitMessageSend[] = "Client Entering Sleep Mode";
-     rf95.send(waitMessageSend, sizeof(waitMessageSend));
+    rf95.send(waitMessageSend, sizeof(waitMessageSend));
     rf95.waitPacketSent();
     rf95.sleep();
   }
@@ -342,7 +342,7 @@ void cmdParse(String BUF){  //interpret the user command
     SerialUSB.println(setMsg);
     byte cmdSendLen = strlen(setMsg);
     rf95.send((uint8_t *) setMsg, cmdSendLen+1);
-    memset(setMsg, NULL, cmdSendLen);
+    memset(setMsg, 0, cmdSendLen);
     rf95.waitPacketSent();
     rf95.setSignalBandwidth(bufInt);
   }
@@ -370,7 +370,6 @@ void cmdParse(String BUF){  //interpret the user command
     strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
     bufInt = atoi(strtokIndx);     // convert this part to a int for the bandwidth
     
-    rf95.setCodingRate4(bufInt);
     char setMsg[maxCharLen];
     snprintf(setMsg,maxCharLen, "Coding Ratio set:%d", bufInt);
     SerialUSB.print("Sending set message: ");

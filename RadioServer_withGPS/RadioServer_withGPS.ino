@@ -20,7 +20,7 @@ long timeSinceLastPacket = 0; //Tracks the time stamp of last packet received
 //float frequency = 864.1;
 float frequency = 921.2;
 int safeMode = 1;
-char header[] = "Date, Time, SatelliteCount, Latitude, Longitude, Speed (kmph), Altitude (m), SNR";
+char header[] = "Date, Time, SatelliteCount, Latitude, Longitude, Speed (kmph), Altitude (m), SNR, RSSI";
 String DEBUG_Buff;  //buffer for the USB Serial monitor
 int safeModeTimer = 0;
 int safeModeTimeout = 0;  //Used to track whether tranceiver has entered safemode because of timeout
@@ -75,7 +75,8 @@ void loop()
       safeModeTimeout = 0;
       //SerialUSB.print("Received message: ");
       SerialUSB.print((char*)buf); SerialUSB.print(" SNR:");
-      SerialUSB.println(rf95.lastSNR());
+      SerialUSB.print(rf95.lastSNR());
+      SerialUSB.print(" RSSI:"); SerialUSB.println(rf95.lastRssi());
       //SerialUSB.print(" RSSI: ");
       //SerialUSB.print(rf95.lastRssi(), DEC);
       //SerialUSB.println();
@@ -118,7 +119,7 @@ void loop()
 void safeTransmission(){ //define transmission mode that minimizes chance of data being corrupted
   SerialUSB.println("Safe Transmission Mode");
   rf95.sleep();
-  rf95.setSignalBandwidth(125000); //62.5kHz, see RH_RF95.h for documentation
+  rf95.setSignalBandwidth(125000); //125kHz, see RH_RF95.h for documentation
   rf95.setSpreadingFactor(9);
   rf95.setCodingRate4(8);
   rf95.available();
@@ -167,12 +168,14 @@ void checkSafeMode(){ //if no client transmissions are successfully recieved wit
   if (millis() - safeModeTimer > 60000 && safeModeTimeout == 0){
     SerialUSB.println("Timeout entering Safe Transmission");
     safeTransmission();
+    safeMode = 2;
     safeModeTimer = millis();
     safeModeTimeout = 1;
   }
   else if (millis() - safeModeTimer > 60000 && safeModeTimeout == 1) {
     SerialUSB.println("Timeout entering Long Range");
     longRange();
+    safeMode = 0;
     safeModeTimer = millis();
     safeModeTimeout = 0;
   }

@@ -63,7 +63,7 @@ while(newFilename != True):
     else:
         newFilename = True
 f = open(os.path.join(results_dir,filename),'a')
-header = "Date Time SatCount Latitude Longitude Speed Altitude SNR\n"
+header = "Date Time SatCount Latitude Longitude Speed Altitude SNR RSSI\n"
 f.write(header)
 f.close()
 '''        
@@ -105,6 +105,7 @@ while True:
     GPSstring = GPSstring.replace(' Sp:',' ')
     GPSstring = GPSstring.replace(' Alt:',' ')
     GPSstring = GPSstring.replace(' SNR:',' ')
+    GPSstring = GPSstring.replace(' RSSI:',' ')
     GPSstring = GPSstring.replace(',',' ')
     GPSstring.strip()
     '''checkNumeric = GPSstring.split()

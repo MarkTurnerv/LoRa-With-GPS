@@ -13,7 +13,7 @@ https://github.com/PaulStoffregen/RadioHead/tree/master/examples/rf95
 RadioHead refrence: https://www.airspayce.com/mikem/arduino/RadioHead/classRHGenericDriver.html#a9269fb2eddfaa055c31769619d808dbe
 
 To do:
-  need to change definition of RS$!_GPIO_PWR_PIN from 32 -> 36?
+  need to change definition of RS41_GPIO_PWR_PIN from 32 -> 36?
   need to define COPI CIPO pins somewhere?
 */
 
@@ -22,7 +22,7 @@ To do:
 //Radio Head Library:
 #include <RH_RF95.h> 
 #include "TinyGPS++.h"
-//#include <RS41.h>
+#include <RS41.h>
 
 #define GPSSERIAL Serial4
 //#define TSENSERIAL Serial8    //for ECU on Teensy 4.1
@@ -30,21 +30,16 @@ To do:
 #define SerialUSB Serial
 
 //Teensy setup
-//int pinLoRaCS = 10; //SPI chip select pin for LoRa radio on ECU
-int pinLoRaCS = 19; //SPI chip select pin for LoRa radio on EFU
+int pinLoRaCS = 10; //SPI chip select pin for LoRa radio on ECU
+//int pinLoRaCS = 19; //SPI chip select pin for LoRa radio on EFU
 int pinLoRaCOPI = 11;   //Controller out Peripheral in (formerly MoSI)
 int pinLoRaCIPO = 12; //Controller out Peripheral in (formerly MISO)
-int pinLoRaINT = 18;//for EFU, 14 for ECU
+int pinLoRaINT = 14;// 18 for EFU, 14 for ECU
 int pinRS41_ENABLE = 36;
 
 // We need to provide the RFM95 module's chip select and interrupt pins to the
 // rf95 instance below.On the Teensy 4.1 those pins are 10 and 14 respectively.
 RH_RF95 rf95(pinLoRaCS, pinLoRaINT);
-
-//RS41 rs41(Serial6);
-
-//int packetCounter = 0; //Counts the number of packets sent
-//long timeSinceLastPacket = 0; //Tracks the time stamp of last packet received
 
 // The broadcast frequency is set to 921.2, but the SADM21 ProRf operates
 // anywhere in the range of 902-928MHz in the Americas.
@@ -56,6 +51,7 @@ byte sendLen;   //length of the GPS message to be sent
 const int maxCharLen = 150; //amount of memory allocated to fit GPS data
 //maximum LoRa transmission = 255 octets - 1 byte for message length - 4 bytes for header - 2 bytes FCS = 250 max transmission length
 char GPStransmit[150];    //variable to contain the GPS data to be send over LoRa
+char RS41transmit[250];
 TinyGPSPlus gps;    //instance of TinyGPSPlus
 bool locUpd=0;    //booleans to check whether the location, altitude, and number of available satellites has been updated
 bool altUpd = 0;
@@ -65,20 +61,27 @@ int GPSreceivingTimeout = 0;    //timeout check for if no satellite data is upda
 int safeMode = 1;   //set the initial transmission mode tracker to safe mode
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN]; //buffer to receive general transmissions
 uint8_t len = sizeof(buf);    // size of general receive buffer
+int maxReceiveTime = 1;
 
-
-
+bool first_loop = true;
+bool recondition = true;
+RS41 rs41(Serial6);
+RS41::RS41SensorData_t sensor_data;
 
 void setup()
 {
-  safeTransmission(); //initialize client to safeTransmission mode
+  //safeTransmission(); //initialize client to safeTransmission mode
   pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN,HIGH);
+  delay(500);
+  digitalWrite(LED_BUILTIN,LOW);
 
-  SerialUSB.begin(115200);  //Serial port to talk to laptop
+  SerialUSB.begin(9600);  //Serial port to talk to laptop
   GPSSERIAL.begin(9600);
   while(!SerialUSB); 
   SerialUSB.println("RFM Client!"); 
   pinMode(pinRS41_ENABLE,OUTPUT);
+  digitalWrite(pinRS41_ENABLE,HIGH);
 
   //Initialize the Radio.
   if (rf95.init() == false){
@@ -96,6 +99,12 @@ void setup()
 
   // Set frequency
   rf95.setFrequency(frequency);
+  SerialUSB.println("Safe Transmission Mode");
+  rf95.sleep();
+  rf95.setSignalBandwidth(125000); //125kHz, see RH_RF95.h for documentation
+  rf95.setSpreadingFactor(9);
+  rf95.setCodingRate4(8);
+  rf95.available();
   //rf95.setSignalBandwidth(65000); //62.5kHz, see RH_RF95.h for documentation
   //rf95.setSpreadingFactor(9);  //increasing SF increases range at cost of data transmission rate
   //at SF=11 server drops half of the messages when sending at maximum speed (~2-3 sec/transmission)
@@ -112,13 +121,14 @@ void setup()
   //sprintf(toSend, "Hi, my counter is: %d", packetCounter++);
   SerialUSB.println("Sending Initial Message: ");
   rf95.send(initSend, sizeof(initSend));
+  rs41.init();
 }
 
 
 void loop()
 {
   //checkCmd(); #check if user command was sent from server
-  if(GPSSERIAL.available()) {
+  /*if(GPSSERIAL.available()) {
     if(gps.encode(GPSSERIAL.read())) {
       //checkCmd();
       if(gps.location.isUpdated()) {  //check if location data has been updated since last loop
@@ -180,10 +190,9 @@ void loop()
       }
     }
   }
-  
   else {
     //checkCmd();
-    if (millis()-GPSreceivingTimeout > 30000) {    //if GPS reciever has not sent any updates over LoRa in 30 seconds
+    if (millis()-GPSreceivingTimeout > 8000) {    //if GPS reciever has not sent any updates over LoRa in 30 seconds
       updateMode();
       timeout = millis();
       GPSreceivingTimeout = millis();
@@ -192,16 +201,25 @@ void loop()
       rf95.send(waitMessageSend, sizeof(waitMessageSend));
       rf95.waitPacketSent();
 
+      if (safeMode == 0){ //Long Range Mode
+        maxReceiveTime = 20000;
+      }
+      else if (safeMode == 2){  //Safe Transmission Mode
+        maxReceiveTime = 18000;
+      }
+      else{ //High Data Rate Mode
+        maxReceiveTime = 8000;
+      }
       // Now wait for a reply
-      if (rf95.waitAvailableTimeout(20000)) {
+      if (rf95.waitAvailableTimeout(maxReceiveTime)) {
         // Should be a reply message for us now
         if (rf95.recv(buf, &len)) {
           String BUF = (char*)buf;
           SerialUSB.print("Got reply: ");
           
           SerialUSB.println(BUF);
-          SerialUSB.print(" SNR:"); SerialUSB.println(rf95.lastSNR());
-          SerialUSB.print(" RSSI: "); SerialUSB.print(rf95.lastRssi(), DEC);
+          SerialUSB.print("SNR:"); SerialUSB.print(rf95.lastSNR());
+          SerialUSB.print(" RSSI: "); SerialUSB.println(rf95.lastRssi(), DEC);
         }
         else {
           SerialUSB.println("Receive failed");
@@ -211,7 +229,64 @@ void loop()
         SerialUSB.println("No reply, is the receiver running?");
       }
     }
+  }*/
+
+  if (first_loop) {
+  Serial.println(rs41.banner());
+  Serial.println("RS41 meta data: " + rs41.meta_data());
+  Serial.println(rs41.sensor_data_var_names);
+  first_loop = false;
   }
+
+  delay(2000);
+
+  if (recondition){
+    String recond = rs41.recondition();
+    if (!recond.length()){
+      Serial.println("RS41 did not respond to RHS");
+    } else {
+      Serial.print("Recondition: ");
+      Serial.println(recond);
+      recondition = false;
+    }
+  }
+
+  sensor_data = rs41.decoded_sensor_data(false);
+  if (sensor_data.valid) {
+    Serial.print(sensor_data.frame_count); Serial.print(",");
+    Serial.print(sensor_data.air_temp_degC); Serial.print(",");
+    Serial.print(sensor_data.humdity_percent); Serial.print(",");
+    Serial.print(sensor_data.hsensor_temp_degC); Serial.print(",");
+    Serial.print(sensor_data.pres_mb); Serial.print(",");
+    Serial.print(sensor_data.internal_temp_degC); Serial.print(",");
+    Serial.print(sensor_data.module_status); Serial.print(",");
+    Serial.print(sensor_data.module_error); Serial.print(",");
+    Serial.print(sensor_data.pcb_supply_V); Serial.print(",");
+    Serial.print(sensor_data.lsm303_temp_degC); Serial.print(",");
+    Serial.print(sensor_data.pcb_heater_on); Serial.print(",");
+    Serial.print(sensor_data.mag_hdgXY_deg); Serial.print(",");
+    Serial.print(sensor_data.mag_hdgXZ_deg); Serial.print(",");
+    Serial.print(sensor_data.mag_hdgYZ_deg); Serial.print(",");
+    Serial.print(sensor_data.accelX_mG); Serial.print(",");
+    Serial.print(sensor_data.accelY_mG); Serial.print(",");
+    Serial.print(sensor_data.accelZ_mG);
+    Serial.println();
+  } else {
+    Serial.println("Unable to obtain RS41 sensor data");
+  }
+}
+
+void sendRS41(){  //send RS41 data packet over LoRa
+snprintf(RS41transmit,maxCharLen, "%d %f %f %f %f %f %d %d %f %f %d %f %f %f %f %f %f",  //save message in c-string
+  sensor_data.frame_count,sensor_data.air_temp_degC,sensor_data.humdity_percent,sensor_data.hsensor_temp_degC,sensor_data.pres_mb,sensor_data.internal_temp_degC,
+  sensor_data.module_status,sensor_data.module_error,sensor_data.pcb_supply_V,sensor_data.lsm303_temp_degC,sensor_data.pcb_heater_on,
+  sensor_data.mag_hdgXY_deg,sensor_data.mag_hdgXZ_deg,sensor_data.mag_hdgYZ_deg,sensor_data.accelX_mG,sensor_data.accelY_mG,sensor_data.accelZ_mG);
+  SerialUSB.print("Sending message: ");
+  SerialUSB.println(RS41transmit);
+  sendLen = strlen(RS41transmit);
+  rf95.send((uint8_t *) RS41transmit, sendLen+1);  //add 1 to length to include terminating character
+  memset(RS41transmit, 0, sendLen);
+  rf95.waitPacketSent();
 }
 
 void sendGPS(){ //Send GPS packet over LoRa
@@ -249,7 +324,7 @@ void getLoRaReply(){  //Get reply from LoRa server
 void safeTransmission(){ //define transmission mode that minimizes chance of data being corrupted
   SerialUSB.println("Safe Transmission Mode");
   rf95.sleep();
-  rf95.setSignalBandwidth(125000); //62.5kHz, see RH_RF95.h for documentation
+  rf95.setSignalBandwidth(125000); //125kHz, see RH_RF95.h for documentation
   rf95.setSpreadingFactor(9);
   rf95.setCodingRate4(8);
   rf95.available();
@@ -321,7 +396,7 @@ void cmdParse(String BUF){  //interpret the user command
   if (BUF.startsWith("Cmd: HDR")){
     highDataRate();
     uint8_t waitMessageSend[] = "Client Entering High Data Rate Mode";
-     rf95.send(waitMessageSend, sizeof(waitMessageSend));
+    rf95.send(waitMessageSend, sizeof(waitMessageSend));
     rf95.waitPacketSent();
     highDataRate();
   }
