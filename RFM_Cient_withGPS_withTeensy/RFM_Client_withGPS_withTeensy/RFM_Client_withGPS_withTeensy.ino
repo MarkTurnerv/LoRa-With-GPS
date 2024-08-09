@@ -158,86 +158,80 @@ void loop()
         getLoRaReply(maxReceiveTime);
       }
       else {
-        if(locUpd || altUpd) {  //error message if either the location or altitude has been updated but the other has not
-          if(millis() - timeout > 15000){  //if last complete update was longer than 15 seconds ago
-            timeout = millis();
-            GPSreceivingTimeout = millis();
-            const char *timeoutSend;
-            bool TimeoutMessage;
-            if(!satCntUpd) {
-              timeoutSend = "Satellite Count not updated";
-              TimeoutMessage = 1;
-            }
-            if(!altUpd) {
-              timeoutSend = "GPS Altitude not updated";
-              TimeoutMessage = 1;
-            }
-            if(!locUpd) {
-              timeoutSend = "GPS Location not updated";
-              TimeoutMessage = 1;
-            }
-            else {  //this case should never be called
-              timeoutSend = "System Timeout";
-              TimeoutMessage = 1;
-            }
-            if (TimeoutMessage) { //send warning of what did not update
-              rf95.send((uint8_t *) timeoutSend, strlen(timeoutSend)+1);  //add one to message char length to include terminating character 0
-              rf95.waitPacketSent();
-              delay(250);
-              sendGPS();  //send (partially updated) GPS data
-              //checkCmd();
-            }
-          }
-        }
+        checkPartialGPSUpdate();
       }
     }
   }
   else {
     //checkCmd();
-    /*if (first_loop) {
+    //checkRS41;
+    GPSTimeout();
+  }
+}
+
+void checkPartialGPSUpdate() {
+  if(locUpd || altUpd) {  //error message if either the location or altitude has been updated but the other has not
+    if(millis() - timeout > 15000){  //if last complete update was longer than 15 seconds ago
+      timeout = millis();
+      GPSreceivingTimeout = millis();
+      const char *timeoutSend;
+      bool TimeoutMessage;
+      if(!satCntUpd) {
+        timeoutSend = "Satellite Count not updated";
+        TimeoutMessage = 1;
+      }
+      if(!altUpd) {
+        timeoutSend = "GPS Altitude not updated";
+        TimeoutMessage = 1;
+      }
+      if(!locUpd) {
+        timeoutSend = "GPS Location not updated";
+        TimeoutMessage = 1;
+      }
+      else {  //this case should never be called
+        timeoutSend = "System Timeout";
+        TimeoutMessage = 1;
+      }
+      if (TimeoutMessage) { //send warning of what did not update
+        rf95.send((uint8_t *) timeoutSend, strlen(timeoutSend)+1);  //add one to message char length to include terminating character 0
+        rf95.waitPacketSent();
+        delay(250);
+        sendGPS();  //send (partially updated) GPS data
+        //checkCmd();
+      }
+    }
+  }
+}
+
+void checkRS41(){
+  if (first_loop) {
     Serial.println(rs41.banner());
     Serial.println("RS41 meta data: " + rs41.meta_data());
     Serial.println(rs41.sensor_data_var_names);
     first_loop = false;
-    }
+  }
 
-    delay(2000);
+  delay(2000);
 
-    if (recondition){
-      String recond = rs41.recondition();
-      if (!recond.length()){
-        Serial.println("RS41 did not respond to RHS");
-      } else {
-        Serial.print("Recondition: ");
-        Serial.println(recond);
-        recondition = false;
-      }
-    }
-    
-    sensor_data = rs41.decoded_sensor_data(false);
-    if (sensor_data.valid) {
-      updateMode();
-      sendRS41();
-      timeout = millis();
+  if (recondition){
+    String recond = rs41.recondition();
+    if (!recond.length()){
+      Serial.println("RS41 did not respond to RHS");
     } else {
-      Serial.println("Unable to obtain RS41 sensor data");
-    }*/
-    if (millis()-GPSreceivingTimeout > 8000) {    //if GPS reciever has not sent any updates over LoRa in 30 seconds
-      updateMode();
-      timeout = millis();
-      GPSreceivingTimeout = millis();
-      SerialUSB.print("Sending wait message: ");
-      uint8_t waitMessageSend[] = "Waiting for GPS";
-      rf95.send(waitMessageSend, sizeof(waitMessageSend));
-      rf95.waitPacketSent();
-
-      setMaxReceiveTime();
-      // Now wait for a reply
-      getLoRaReply(maxReceiveTime);
+      Serial.print("Recondition: ");
+      Serial.println(recond);
+      recondition = false;
     }
   }
   
-
+  sensor_data = rs41.decoded_sensor_data(false);
+  if (sensor_data.valid) {
+    updateMode();
+    sendRS41();
+    timeout = millis();
+  } else {
+    Serial.println("Unable to obtain RS41 sensor data");
+  }
 }
 
 void sendRS41(){  //send RS41 data packet over LoRa
@@ -296,6 +290,20 @@ void setMaxReceiveTime(){
   }
   else{ //High Data Rate Mode
     maxReceiveTime = 8000;
+  }
+}
+
+void GPSTimeout(){
+  if (millis()-GPSreceivingTimeout > 8000) {    //if GPS reciever has not sent any updates over LoRa in 30 seconds
+    updateMode();
+    timeout = millis();
+    GPSreceivingTimeout = millis();
+    SerialUSB.print("Sending wait message: ");
+    uint8_t waitMessageSend[] = "Waiting for GPS";
+    rf95.send(waitMessageSend, sizeof(waitMessageSend));
+    rf95.waitPacketSent();
+    setMaxReceiveTime();
+    getLoRaReply(maxReceiveTime);
   }
 }
 
