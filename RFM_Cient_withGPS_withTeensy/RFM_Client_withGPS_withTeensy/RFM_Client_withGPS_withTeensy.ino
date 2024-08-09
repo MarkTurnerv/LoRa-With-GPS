@@ -13,8 +13,8 @@ https://github.com/PaulStoffregen/RadioHead/tree/master/examples/rf95
 RadioHead refrence: https://www.airspayce.com/mikem/arduino/RadioHead/classRHGenericDriver.html#a9269fb2eddfaa055c31769619d808dbe
 
 To do:
-  need to change definition of RS41_GPIO_PWR_PIN from 32 -> 36?
-  need to define COPI CIPO pins somewhere?
+  need to change definition of RS41_GPIO_PWR_PIN from 32 -> 36 (in RS41.h)?
+  for longduration flight: millis will overflow after 50 days and reset; shouldn't cause problem
 */
 
 #include <SPI.h>
@@ -128,7 +128,7 @@ void setup()
 void loop()
 {
   //checkCmd(); #check if user command was sent from server
-  /*if(GPSSERIAL.available()) {
+  if(GPSSERIAL.available()) {
     if(gps.encode(GPSSERIAL.read())) {
       //checkCmd();
       if(gps.location.isUpdated()) {  //check if location data has been updated since last loop
@@ -153,7 +153,9 @@ void loop()
         //checkCmd();
         // Now wait for a reply 
           //commented out waiting for reply so the transmitter continuously sends GPS data regardless of whether it is recieved
-        getLoRaReply();
+        setMaxReceiveTime();
+        // Now wait for a reply
+        getLoRaReply(maxReceiveTime);
       }
       else {
         if(locUpd || altUpd) {  //error message if either the location or altitude has been updated but the other has not
@@ -192,6 +194,34 @@ void loop()
   }
   else {
     //checkCmd();
+    /*if (first_loop) {
+    Serial.println(rs41.banner());
+    Serial.println("RS41 meta data: " + rs41.meta_data());
+    Serial.println(rs41.sensor_data_var_names);
+    first_loop = false;
+    }
+
+    delay(2000);
+
+    if (recondition){
+      String recond = rs41.recondition();
+      if (!recond.length()){
+        Serial.println("RS41 did not respond to RHS");
+      } else {
+        Serial.print("Recondition: ");
+        Serial.println(recond);
+        recondition = false;
+      }
+    }
+    
+    sensor_data = rs41.decoded_sensor_data(false);
+    if (sensor_data.valid) {
+      updateMode();
+      sendRS41();
+      timeout = millis();
+    } else {
+      Serial.println("Unable to obtain RS41 sensor data");
+    }*/
     if (millis()-GPSreceivingTimeout > 8000) {    //if GPS reciever has not sent any updates over LoRa in 30 seconds
       updateMode();
       timeout = millis();
@@ -201,63 +231,13 @@ void loop()
       rf95.send(waitMessageSend, sizeof(waitMessageSend));
       rf95.waitPacketSent();
 
-      if (safeMode == 0){ //Long Range Mode
-        maxReceiveTime = 20000;
-      }
-      else if (safeMode == 2){  //Safe Transmission Mode
-        maxReceiveTime = 18000;
-      }
-      else{ //High Data Rate Mode
-        maxReceiveTime = 8000;
-      }
+      setMaxReceiveTime();
       // Now wait for a reply
-      if (rf95.waitAvailableTimeout(maxReceiveTime)) {
-        // Should be a reply message for us now
-        if (rf95.recv(buf, &len)) {
-          String BUF = (char*)buf;
-          SerialUSB.print("Got reply: ");
-          
-          SerialUSB.println(BUF);
-          SerialUSB.print("SNR:"); SerialUSB.print(rf95.lastSNR());
-          SerialUSB.print(" RSSI: "); SerialUSB.println(rf95.lastRssi(), DEC);
-        }
-        else {
-          SerialUSB.println("Receive failed");
-        }
-      }
-      else {
-        SerialUSB.println("No reply, is the receiver running?");
-      }
-    }
-  }*/
-
-  if (first_loop) {
-  Serial.println(rs41.banner());
-  Serial.println("RS41 meta data: " + rs41.meta_data());
-  Serial.println(rs41.sensor_data_var_names);
-  first_loop = false;
-  }
-
-  delay(2000);
-
-  if (recondition){
-    String recond = rs41.recondition();
-    if (!recond.length()){
-      Serial.println("RS41 did not respond to RHS");
-    } else {
-      Serial.print("Recondition: ");
-      Serial.println(recond);
-      recondition = false;
+      getLoRaReply(maxReceiveTime);
     }
   }
+  
 
-  sensor_data = rs41.decoded_sensor_data(false);
-  if (sensor_data.valid) {
-    updateMode();
-    sendRS41();
-  } else {
-    Serial.println("Unable to obtain RS41 sensor data");
-  }
 }
 
 void sendRS41(){  //send RS41 data packet over LoRa
@@ -265,7 +245,7 @@ snprintf(RS41transmit,maxCharLen, "%d %f %f %f %f %f %d %d %f %f %d %f %f %f %f 
   sensor_data.frame_count,sensor_data.air_temp_degC,sensor_data.humdity_percent,sensor_data.hsensor_temp_degC,sensor_data.pres_mb,sensor_data.internal_temp_degC,
   sensor_data.module_status,sensor_data.module_error,sensor_data.pcb_supply_V,sensor_data.lsm303_temp_degC,sensor_data.pcb_heater_on,
   sensor_data.mag_hdgXY_deg,sensor_data.mag_hdgXZ_deg,sensor_data.mag_hdgYZ_deg,sensor_data.accelX_mG,sensor_data.accelY_mG,sensor_data.accelZ_mG);
-  SerialUSB.print("Sending message: ");
+  SerialUSB.print("Sending RS41 message: ");
   SerialUSB.println(RS41transmit);
   sendLen = strlen(RS41transmit);
   rf95.send((uint8_t *) RS41transmit, sendLen+1);  //add 1 to length to include terminating character
@@ -277,7 +257,7 @@ void sendGPS(){ //Send GPS packet over LoRa
   snprintf(GPStransmit,maxCharLen, "%d/%d/%d %02d:%02d:%02d SC:%lu lat:%.6f lon:%.6f Sp:%.5f Alt:%.1f",  //save message in c-string
   gps.date.month(),gps.date.day(),gps.date.year(),gps.time.hour(),gps.time.minute(),gps.time.second(),gps.satellites.value(),
   gps.location.lat(),gps.location.lng(),gps.speed.kmph(),gps.altitude.meters());
-  SerialUSB.print("Sending message: ");
+  SerialUSB.print("Sending GPS message: ");
   SerialUSB.println(GPStransmit);
   sendLen = strlen(GPStransmit);
   rf95.send((uint8_t *) GPStransmit, sendLen+1);  //add 1 to length to include terminating character
@@ -285,23 +265,37 @@ void sendGPS(){ //Send GPS packet over LoRa
   rf95.waitPacketSent();
 }
 
-void getLoRaReply(){  //Get reply from LoRa server
+void getLoRaReply(int maxReceiveTime){  //Get reply from LoRa server
   byte buf[RH_RF95_MAX_MESSAGE_LEN];
   byte len = sizeof(buf);
-  if (rf95.waitAvailableTimeout(10000)) {
+  if (rf95.waitAvailableTimeout(maxReceiveTime)) {
     if (rf95.recv(buf, &len)) {
       SerialUSB.print("Got reply: ");
       SerialUSB.println((char*)buf);
       SerialUSB.print(" SNR:"); SerialUSB.println(rf95.lastSNR());
       SerialUSB.print(" RSSI:");
-      SerialUSB.print(rf95.lastRssi(), DEC);
+      SerialUSB.println(rf95.lastRssi(), DEC);
     }
     else {
       SerialUSB.println("Receive failed");
     }
+    timeout = millis();
   }
   else {
     SerialUSB.println("No reply, is the receiver running?");
+    timeout = millis();
+  }
+}
+
+void setMaxReceiveTime(){
+  if (safeMode == 0){ //Long Range Mode
+    maxReceiveTime = 20000;
+  }
+  else if (safeMode == 2){  //Safe Transmission Mode
+    maxReceiveTime = 18000;
+  }
+  else{ //High Data Rate Mode
+    maxReceiveTime = 8000;
   }
 }
 
