@@ -18,6 +18,7 @@ To do:
 */
 
 #include <SPI.h>
+#include <SD.h>
 
 //Radio Head Library:
 #include <RH_RF95.h> 
@@ -67,6 +68,9 @@ bool first_loop = true;
 bool recondition = true;
 RS41 rs41(Serial6);
 RS41::RS41SensorData_t sensor_data;
+File SDcard;
+String Filename;
+char filename[100];
 
 void setup()
 {
@@ -78,7 +82,17 @@ void setup()
 
   SerialUSB.begin(9600);  //Serial port to talk to laptop
   GPSSERIAL.begin(9600);
-  while(!SerialUSB); 
+  if (!SD.begin(BUILTIN_SDCARD)) {
+    Serial.println("SD card initialization failed!");
+    while (1);
+  }
+  Serial.println("SD card initialized");
+  Filename = nameFile();
+  Filename.toCharArray(filename, 100);
+  SDcard = SD.open(filename, FILE_WRITE);
+  
+  //while(!SerialUSB); 
+  delay(1000);
   SerialUSB.println("RFM Client!"); 
   pinMode(pinRS41_ENABLE,OUTPUT);
   digitalWrite(pinRS41_ENABLE,HIGH);
@@ -119,6 +133,10 @@ void setup()
    //send header (can be saved on receiving end using GPSfileSaver.py)
    uint8_t initSend[] = "Date, Time, SatelliteCount, Latitude, Longitude, Speed (kmph), Altitude (m), SNR";
   //sprintf(toSend, "Hi, my counter is: %d", packetCounter++);
+  if (SDcard) {
+    SerialUSB.println("Writing to SD...");
+    SDcard.println((char*)initSend);
+  }
   SerialUSB.println("Sending Initial Message: ");
   rf95.send(initSend, sizeof(initSend));
   rs41.init();
@@ -131,7 +149,7 @@ void loop()
   if(GPSSERIAL.available()) {
     if(gps.encode(GPSSERIAL.read())) {
       //checkCmd();
-      if(gps.location.isUpdated()) {  //check if location data has been updated since last loop
+      if(gps.location.isUpdated()) {  //check if location  has been updated since last loop
         locUpd = 1;
       }
       if(gps.altitude.isUpdated()) {  //check if altitude data has been updated since last loop
@@ -169,6 +187,16 @@ void loop()
   }
 }
 
+
+String nameFile() {
+  int fileNum = 1;
+  if (SD.exists("ECU" + fileNum)) {
+    String filename = "ECU" + fileNum;
+  } else {
+    fileNum++;
+  }
+  return filename;
+}
 void checkPartialGPSUpdate() {
   if(locUpd || altUpd) {  //error message if either the location or altitude has been updated but the other has not
     if(millis() - timeout > 15000){  //if last complete update was longer than 15 seconds ago
@@ -235,12 +263,13 @@ void checkRS41(){
 }
 
 void sendRS41(){  //send RS41 data packet over LoRa
-snprintf(RS41transmit,maxCharLen, "%d %f %f %f %f %f %d %d %f %f %d %f %f %f %f %f %f",  //save message in c-string
+snprintf(RS41transmit,maxCharLen, "R%d %f %f %f %f %f %d %d %f %f %d %f %f %f %f %f %f",  //save message in c-string
   sensor_data.frame_count,sensor_data.air_temp_degC,sensor_data.humdity_percent,sensor_data.hsensor_temp_degC,sensor_data.pres_mb,sensor_data.internal_temp_degC,
   sensor_data.module_status,sensor_data.module_error,sensor_data.pcb_supply_V,sensor_data.lsm303_temp_degC,sensor_data.pcb_heater_on,
   sensor_data.mag_hdgXY_deg,sensor_data.mag_hdgXZ_deg,sensor_data.mag_hdgYZ_deg,sensor_data.accelX_mG,sensor_data.accelY_mG,sensor_data.accelZ_mG);
   SerialUSB.print("Sending RS41 message: ");
   SerialUSB.println(RS41transmit);
+  SDcard.println(RS41transmit);
   sendLen = strlen(RS41transmit);
   rf95.send((uint8_t *) RS41transmit, sendLen+1);  //add 1 to length to include terminating character
   memset(RS41transmit, 0, sendLen);
@@ -248,11 +277,12 @@ snprintf(RS41transmit,maxCharLen, "%d %f %f %f %f %f %d %d %f %f %d %f %f %f %f 
 }
 
 void sendGPS(){ //Send GPS packet over LoRa
-  snprintf(GPStransmit,maxCharLen, "%d/%d/%d %02d:%02d:%02d SC:%lu lat:%.6f lon:%.6f Sp:%.5f Alt:%.1f",  //save message in c-string
+  snprintf(GPStransmit,maxCharLen, "G%d/%d/%d %02d:%02d:%02d SC:%lu lat:%.6f lon:%.6f Sp:%.5f Alt:%.1f",  //save message in c-string
   gps.date.month(),gps.date.day(),gps.date.year(),gps.time.hour(),gps.time.minute(),gps.time.second(),gps.satellites.value(),
   gps.location.lat(),gps.location.lng(),gps.speed.kmph(),gps.altitude.meters());
   SerialUSB.print("Sending GPS message: ");
   SerialUSB.println(GPStransmit);
+  SDcard.println(GPStransmit);
   sendLen = strlen(GPStransmit);
   rf95.send((uint8_t *) GPStransmit, sendLen+1);  //add 1 to length to include terminating character
   memset(GPStransmit, 0, sendLen);
@@ -265,10 +295,15 @@ void getLoRaReply(int maxReceiveTime){  //Get reply from LoRa server
   if (rf95.waitAvailableTimeout(maxReceiveTime)) {
     if (rf95.recv(buf, &len)) {
       SerialUSB.print("Got reply: ");
+      SDcard.print(("Got reply: "));
       SerialUSB.println((char*)buf);
+      SDcard.print((char*)buf);
       SerialUSB.print(" SNR:"); SerialUSB.println(rf95.lastSNR());
+      SDcard.print(" SNR:"); SDcard.print(rf95.lastSNR());
       SerialUSB.print(" RSSI:");
+      SDcard.print(" RSSI:");
       SerialUSB.println(rf95.lastRssi(), DEC);
+      SDcard.println(rf95.lastRssi(), DEC);
     }
     else {
       SerialUSB.println("Receive failed");

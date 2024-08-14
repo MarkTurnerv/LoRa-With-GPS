@@ -1,15 +1,16 @@
 //comment out all extraneous SerialUSB communication if saving to txt file with GPSfileSaver.py
-
+#define SerialUSB Serial
 #include <SPI.h>
 //#include "CommandLineInterface.h"
 //Radio Head Library: 
 #include <RH_RF95.h>
 
+//Teensy setup
+int pinLORA_CS = 38;//12;10;
+int pinLORA_INT = 37;//6;14;
 // We need to provide the RFM95 module's chip select and interrupt pins to the 
 // rf95 instance below.On the SparkFun ProRF those pins are 12 and 6 respectively.
-RH_RF95 rf95(12, 6);
-
-int LED = 13; //Status LED on pin 13
+RH_RF95 rf95(pinLORA_CS, pinLORA_INT);
 
 int packetCounter = 0; //Counts the number of packets sent
 long timeSinceLastPacket = 0; //Tracks the time stamp of last packet received
@@ -20,7 +21,7 @@ long timeSinceLastPacket = 0; //Tracks the time stamp of last packet received
 //float frequency = 864.1;
 float frequency = 921.2;
 int safeMode = 1;
-char header[] = "Date, Time, SatelliteCount, Latitude, Longitude, Speed (kmph), Altitude (m), SNR";
+char header[] = "Date, Time, SatelliteCount, Latitude, Longitude, Speed (kmph), Altitude (m), SNR, RSSI";
 String DEBUG_Buff;  //buffer for the USB Serial monitor
 int safeModeTimer = 0;
 int safeModeTimeout = 0;  //Used to track whether tranceiver has entered safemode because of timeout
@@ -28,7 +29,7 @@ int safeModeTimeout = 0;  //Used to track whether tranceiver has entered safemod
 void setup()
 {
   safeTransmission(); //initialize server to safeTransmission mode
-  pinMode(LED, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
 
   SerialUSB.begin(9600);
   // It may be difficult to read serial messages on startup. The following
@@ -44,9 +45,9 @@ void setup()
   else{
   // An LED indicator to let us know radio initialization has completed.
     //SerialUSB.println("Receiver up!");
-    digitalWrite(LED, HIGH);
+    digitalWrite(LED_BUILTIN, HIGH);
     delay(500);
-    digitalWrite(LED, LOW);
+    digitalWrite(LED_BUILTIN, LOW);
     delay(500);
   }
 
@@ -70,14 +71,14 @@ void loop()
     uint8_t len = sizeof(buf);
     checkForCmd();
     if (rf95.recv(buf, &len)){
-      digitalWrite(LED, HIGH); //Turn on status LED
+      digitalWrite(LED_BUILTIN, HIGH); //Turn on status LED
       timeSinceLastPacket = millis(); //Timestamp this packet
       safeModeTimeout = 0;
       //SerialUSB.print("Received message: ");
       SerialUSB.print((char*)buf); SerialUSB.print(" SNR:");
       SerialUSB.println(rf95.lastSNR());
-      //SerialUSB.print(" RSSI: ");
-      //SerialUSB.print(rf95.lastRssi(), DEC);
+      SerialUSB.print(" RSSI: ");
+      SerialUSB.println(rf95.lastRssi(), DEC);
       //SerialUSB.println();
 
       // Send a reply
@@ -87,7 +88,7 @@ void loop()
         rf95.send(toSend, sizeof(toSend));
         rf95.waitPacketSent();
         //SerialUSB.println("Sent a reply");
-        digitalWrite(LED, LOW); //Turn off status LED
+        digitalWrite(LED_BUILTIN, LOW); //Turn off status LED
         memset(toSend, 0, sizeof(toSend));
       }
       if (BUF.equals("Satellite Count not updated") || BUF.equals("GPS Altitude not updated") || BUF.equals("GPS Location not updated") || BUF.equals("System Timeout")) {
@@ -95,7 +96,7 @@ void loop()
         rf95.send(toSend, sizeof(toSend));
         rf95.waitPacketSent();
         //SerialUSB.println("Sent a reply");
-        digitalWrite(LED, LOW); //Turn off status LED
+        digitalWrite(LED_BUILTIN, LOW); //Turn off status LED
         memset(toSend, 0, sizeof(toSend));
       }
       else{
@@ -103,7 +104,7 @@ void loop()
         rf95.send(toSend, sizeof(toSend));
         rf95.waitPacketSent();
         //SerialUSB.println("Sent a reply");
-        digitalWrite(LED, LOW); //Turn off status LED
+        digitalWrite(LED_BUILTIN, LOW); //Turn off status LED
         memset(toSend, 0, sizeof(toSend));
       }
 
@@ -114,7 +115,7 @@ void loop()
   }
   //Turn off status LED if we haven't received a packet after 1s
   if(millis() - timeSinceLastPacket > 1000){
-    digitalWrite(LED, LOW); //Turn off status LED
+    digitalWrite(LED_BUILTIN, LOW); //Turn off status LED
     timeSinceLastPacket = millis(); //Don't write LED but every 1s
   }
 }
@@ -143,7 +144,7 @@ bool receiveLoRa(){
 void safeTransmission(){ //define transmission mode that minimizes chance of data being corrupted
   SerialUSB.println("Safe Transmission Mode");
   rf95.sleep();
-  rf95.setSignalBandwidth(125000); //62.5kHz, see RH_RF95.h for documentation
+  rf95.setSignalBandwidth(125000); //125kHz, see RH_RF95.h for documentation
   rf95.setSpreadingFactor(9);
   rf95.setCodingRate4(8);
   rf95.available();
@@ -192,12 +193,14 @@ void checkSafeMode(){ //if no client transmissions are successfully recieved wit
   if (millis() - safeModeTimer > 60000 && safeModeTimeout == 0){
     SerialUSB.println("Timeout entering Safe Transmission");
     safeTransmission();
+    safeMode = 2;
     safeModeTimer = millis();
     safeModeTimeout = 1;
   }
   else if (millis() - safeModeTimer > 60000 && safeModeTimeout == 1) {
     SerialUSB.println("Timeout entering Long Range");
     longRange();
+    safeMode = 0;
     safeModeTimer = millis();
     safeModeTimeout = 0;
   }
