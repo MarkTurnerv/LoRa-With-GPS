@@ -89,6 +89,9 @@ void setup()
   Serial.println("SD card initialized");
   Filename = nameFile();
   Filename.toCharArray(filename, 100);
+  SerialUSB.print("Filename: ");
+  SerialUSB.println(filename);
+  SerialUSB.println(Filename);
   SDcard = SD.open(filename, FILE_WRITE);
   
   //while(!SerialUSB); 
@@ -190,10 +193,15 @@ void loop()
 
 String nameFile() {
   int fileNum = 1;
-  if (SD.exists("ECU" + fileNum)) {
-    String filename = "ECU" + fileNum;
-  } else {
-    fileNum++;
+  bool nameCheck = 0;
+  String filename;
+  while (!nameCheck) {
+    if (!SD.exists("ECU" + fileNum)) {
+      filename = "ECU" + fileNum;
+      nameCheck = 1;
+    } else {
+      fileNum++;
+    }
   }
   return filename;
 }
