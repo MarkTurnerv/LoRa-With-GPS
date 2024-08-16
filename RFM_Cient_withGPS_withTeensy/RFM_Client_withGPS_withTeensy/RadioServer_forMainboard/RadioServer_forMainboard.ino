@@ -4,14 +4,18 @@
 //#include "CommandLineInterface.h"
 //Radio Head Library: 
 #include <RH_RF95.h>
+#include <RHDatagram.h>
+#include <RHHardwareSPI1.h>
 
 //Teensy setup
 int pinLORA_CS = 38;//12;10;
 int pinLORA_INT = 37;//6;14;
+int pinLORA_RST = 29;
 // We need to provide the RFM95 module's chip select and interrupt pins to the 
 // rf95 instance below.On the SparkFun ProRF those pins are 12 and 6 respectively.
-RH_RF95 rf95(pinLORA_CS, pinLORA_INT);
 
+RH_RF95 rf95(pinLORA_CS, pinLORA_INT, hardware_spi1);
+RHDatagram rf95_manager(rf95, 0);  //0 is address
 int packetCounter = 0; //Counts the number of packets sent
 long timeSinceLastPacket = 0; //Tracks the time stamp of last packet received
 // The broadcast frequency is set to 921.2, but the SADM21 ProRf operates
@@ -28,13 +32,25 @@ int safeModeTimeout = 0;  //Used to track whether tranceiver has entered safemod
 
 void setup()
 {
+  SPI1.setMISO(39);
+  SPI1.setMOSI(26);
+  SPI1.setSCK(27);
+  pinMode(pinLORA_RST,OUTPUT);
+  digitalWrite(pinLORA_RST,LOW);
+
+  //Manual reset radio
+  digitalWrite(pinLORA_RST,HIGH);
+  delay(10);
+  digitalWrite(pinLORA_RST,LOW);
+  delay(10);
+  
   safeTransmission(); //initialize server to safeTransmission mode
   pinMode(LED_BUILTIN, OUTPUT);
 
   SerialUSB.begin(9600);
   // It may be difficult to read serial messages on startup. The following
   // line will wait for serial to be ready before continuing. Comment out if not needed.
-  //while(!SerialUSB);
+  while(!SerialUSB);
   //SerialUSB.println("RFM Server!");
 
   //Initialize the Radio. 
