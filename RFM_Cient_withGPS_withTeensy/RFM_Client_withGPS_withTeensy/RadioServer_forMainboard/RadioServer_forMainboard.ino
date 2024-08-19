@@ -32,25 +32,34 @@ int safeModeTimeout = 0;  //Used to track whether tranceiver has entered safemod
 
 void setup()
 {
+  SerialUSB.begin(9600);
+  SerialUSB.println("Serial initialized");
+  SPI1.setCS(38);
   SPI1.setMISO(39);
-  SPI1.setMOSI(26);
-  SPI1.setSCK(27);
+  //SPI1.setMOSI(26);
+  //SPI1.setSCK(27);
+  SPI1.begin();
   pinMode(pinLORA_RST,OUTPUT);
-  digitalWrite(pinLORA_RST,LOW);
+  digitalWrite(pinLORA_RST,HIGH);
+  SerialUSB.println("pin set");
 
   //Manual reset radio
-  digitalWrite(pinLORA_RST,HIGH);
-  delay(10);
   digitalWrite(pinLORA_RST,LOW);
   delay(10);
-  
-  safeTransmission(); //initialize server to safeTransmission mode
+  SerialUSB.println("high set");
+  digitalWrite(pinLORA_RST,HIGH);
+  SerialUSB.println("low set");
+  delay(100);
+  SerialUSB.println("LoRa reset");
   pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(500);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(500);
+  while(!SerialUSB);
 
-  SerialUSB.begin(9600);
   // It may be difficult to read serial messages on startup. The following
   // line will wait for serial to be ready before continuing. Comment out if not needed.
-  while(!SerialUSB);
   //SerialUSB.println("RFM Server!");
 
   //Initialize the Radio. 
@@ -68,6 +77,7 @@ void setup()
   }
 
   rf95.setFrequency(frequency); 
+  SerialUSB.println("freq reset");
   //rf95.setSignalBandwidth(65000); //62.5kHz, see RH_RF95.h for documentation
   //rf95.setSpreadingFactor(9);
   //rf95.setCodingRate4(8);
@@ -75,6 +85,9 @@ void setup()
  // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then 
  // you can set transmitter powers from 5 to 23 dBm:
   rf95.setTxPower(21, false);
+  SerialUSB.println("tx set");
+  safeTransmission(); //initialize server to safeTransmission mode
+  SerialUSB.println("mode reset");
 }
 
 void loop()
@@ -384,6 +397,30 @@ void parseCommand(String commandToParse) {
   }
   else if (commandToParse.startsWith("#RS41Off")){
     uint8_t toSend[] = "Cmd: RS41Off";
+    rf95.send(toSend, sizeof(toSend)+1);
+    rf95.waitPacketSent();
+    memset(toSend, 0, sizeof(toSend));
+    commandToParse = "";
+    received = receiveLoRa();
+  }
+  else if (commandToParse.startsWith("#enable12V")){
+    uint8_t toSend[] = "Cmd: enable12V";
+    rf95.send(toSend, sizeof(toSend)+1);
+    rf95.waitPacketSent();
+    memset(toSend, 0, sizeof(toSend));
+    commandToParse = "";
+    received = receiveLoRa();
+  }
+  else if (commandToParse.startsWith("#disable12V")){
+    uint8_t toSend[] = "Cmd: disable12V";
+    rf95.send(toSend, sizeof(toSend)+1);
+    rf95.waitPacketSent();
+    memset(toSend, 0, sizeof(toSend));
+    commandToParse = "";
+    received = receiveLoRa();
+  }
+  else if (commandToParse.startsWith("#boardMon")){
+    uint8_t toSend[] = "Cmd: boardMon";
     rf95.send(toSend, sizeof(toSend)+1);
     rf95.waitPacketSent();
     memset(toSend, 0, sizeof(toSend));

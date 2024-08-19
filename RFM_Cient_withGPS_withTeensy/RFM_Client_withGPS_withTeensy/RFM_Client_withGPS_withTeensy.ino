@@ -17,9 +17,9 @@ To do:
   for longduration flight: millis will overflow after 50 days and reset; shouldn't cause problem
 */
 
-#include <SPI.h>
+#include <SPI.h>  //Serial Peripheral interface, used by LoRa
 #include <SD.h>
-
+#include <DS18B20.h>  //Library for Temperature Sensor on board
 //Radio Head Library:
 #include <RH_RF95.h> 
 #include "TinyGPS++.h"
@@ -37,10 +37,16 @@ int pinLoRaCOPI = 11;   //Controller out Peripheral in (formerly MoSI)
 int pinLoRaCIPO = 12; //Controller out Peripheral in (formerly MISO)
 int pinLoRaINT = 14;// 18 for EFU, 14 for ECU
 int pinRS41_ENABLE = 36;
+int pinDS = 22; //temperature sensor
+int pin5V_MON = 2;  //I don't think these pins will work because they're digital
+int pin12V_IMON = 6;
+int pin12V_MON = 7;
+int pin12V_ENABLE = 5;
+int pinPCB_THERM = 22;
+int pinV_ZYPHR_VMON = 40;
 
-// We need to provide the RFM95 module's chip select and interrupt pins to the
-// rf95 instance below.On the Teensy 4.1 those pins are 10 and 14 respectively.
-RH_RF95 rf95(pinLoRaCS, pinLoRaINT);
+RH_RF95 rf95(pinLoRaCS, pinLoRaINT);  //instance of radio module
+DS18B20 ds(pinDS);  //instance of temperature sensor
 
 // The broadcast frequency is set to 921.2, but the SADM21 ProRf operates
 // anywhere in the range of 902-928MHz in the Americas.
@@ -71,10 +77,17 @@ RS41::RS41SensorData_t sensor_data;
 File SDcard;
 String Filename;
 char filename[100];
+String DEBUG_Buff;  //buffer for the USB Serial monitor
 
 void setup()
 {
   //safeTransmission(); //initialize client to safeTransmission mode
+  pinMode(pin5V_MON,INPUT);
+  pinMode(pin12V_IMON,INPUT);
+  pinMode(pin12V_MON,INPUT);
+  pinMode(pinPCB_THERM,INPUT);
+  pinMode(pinV_ZYPHR_VMON,INPUT);
+  pinMode(pin12V_ENABLE,OUTPUT);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN,HIGH);
   delay(500);
@@ -396,6 +409,37 @@ void updateMode(){  //switch between each of the three modes after every transmi
   }
 }
 
+void boardMon() {
+  String outputString = "5V:";
+  float bin = analogRead(pin5V_MON);
+  float calc = (bin/1024.0) * 4;
+  //outputString += calc;
+  outputString += bin;
+  outputString += ", ";
+  outputString += "12V_I:";
+  outputString += analogRead(pin12V_IMON);
+  outputString += ", ";
+  outputString += "12V:";
+  bin =  analogRead(pin12V_MON);
+  calc = (bin / 1024.0) * 4.87;
+  //outputString += calc;
+  outputString += bin;
+  outputString += ", ";
+  outputString += "PCB_THERM (C):";
+  outputString += ds.getTempC();
+  outputString += ", ";
+  outputString += "Zephr_V:";
+  bin =  analogRead(pinV_ZYPHR_VMON);
+  calc = (bin / 1024.0) * 50.9* 3.28;
+  outputString += calc;
+  char boardMonMes[100];
+  outputString.toCharArray(boardMonMes, 100);
+  rf95.send((uint8_t *)boardMonMes, sizeof(boardMonMes));
+  rf95.waitPacketSent();
+  Serial.println(outputString);
+  outputString = "";
+}
+
 void checkCmd(){  //check if client has recieved any user commands from server
   SerialUSB.println("checking for Cmd");
   if (rf95.waitAvailableTimeout(2000)) {
@@ -497,5 +541,20 @@ void cmdParse(String BUF){  //interpret the user command
     uint8_t toSend[] = "RS41 powered off";
     rf95.send(toSend, sizeof(toSend)+1);
     rf95.waitPacketSent();
+  }
+  if(BUF.startsWith("#Cmd: enable12V")) {
+    digitalWrite(pin12V_ENABLE,LOW);  //prototype ECU board has 12V active low
+    uint8_t toSend[] = "12V powered off";
+    rf95.send(toSend, sizeof(toSend)+1);
+    rf95.waitPacketSent();
+  }
+  if(BUF.startsWith("#Cmd: disable12V")) {
+    digitalWrite(pin12V_ENABLE,HIGH);
+    uint8_t toSend[] = "12V powered on";
+    rf95.send(toSend, sizeof(toSend)+1);
+    rf95.waitPacketSent();
+  }
+  if(BUF.startsWith("#Cmd: boardMon")) {
+    boardMon();
   }
 }
