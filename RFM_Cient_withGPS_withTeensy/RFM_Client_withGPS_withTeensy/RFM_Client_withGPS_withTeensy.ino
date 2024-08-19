@@ -207,10 +207,16 @@ void loop()
 String nameFile() {
   int fileNum = 1;
   bool nameCheck = 0;
-  String filename;
+  char filename[20];
+  String Filename;
+
   while (!nameCheck) {
-    if (!SD.exists("ECU" + fileNum)) {
-      filename = "ECU" + fileNum;
+    Filename = "";
+    Filename = "ECUtest";
+    Filename += fileNum;
+    Filename.toCharArray(filename, 20);
+    if (!SD.exists(filename)) {
+      Serial.println(Filename);
       nameCheck = 1;
     } else {
       fileNum++;
@@ -218,6 +224,7 @@ String nameFile() {
   }
   return filename;
 }
+
 void checkPartialGPSUpdate() {
   if(locUpd || altUpd) {  //error message if either the location or altitude has been updated but the other has not
     if(millis() - timeout > 15000){  //if last complete update was longer than 15 seconds ago
@@ -437,6 +444,12 @@ void boardMon() {
   rf95.send((uint8_t *)boardMonMes, sizeof(boardMonMes));
   rf95.waitPacketSent();
   Serial.println(outputString);
+  SDcard = SD.open(filename, FILE_WRITE);
+    if (SDcard) {
+    Serial.println("Writing to SD...");
+    SDcard.println(outputString);
+  }
+  SDcard.close();
   outputString = "";
 }
 
