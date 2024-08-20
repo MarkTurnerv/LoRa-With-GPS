@@ -11,7 +11,7 @@ RH_RF95 rf95(12, 6);
 
 int LED = 13; //Status LED on pin 13
 
-int packetCounter = 0; //Counts the number of packets sent
+//int packetCounter = 0; //Counts the number of packets sent
 long timeSinceLastPacket = 0; //Tracks the time stamp of last packet received
 // The broadcast frequency is set to 921.2, but the SADM21 ProRf operates
 // anywhere in the range of 902-928MHz in the Americas.
@@ -63,12 +63,12 @@ void setup()
 void loop()
 {
   checkSafeMode();
-  checkForCmd();
+  //checkForCmd();
   if (rf95.available()){
     // Should be a message for us now
     uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
     uint8_t len = sizeof(buf);
-    checkForCmd();
+    //checkForCmd();
     if (rf95.recv(buf, &len)){
       digitalWrite(LED, HIGH); //Turn on status LED
       timeSinceLastPacket = millis(); //Timestamp this packet
@@ -180,7 +180,7 @@ void checkSafeMode(){ //if no client transmissions are successfully recieved wit
     safeModeTimeout = 0;
   }
 }
-
+/*
 void checkForCmd() {  //check serialUSB for user commands
   if (SerialUSB.available()) {
    char DEBUG_Char = SerialUSB.read();
@@ -210,7 +210,7 @@ void parseCommand(String commandToParse) {
    * #setSerBW - sets the bandwidth of just the server side (used to re-establish connection
                   if client changes to a known bandwidth)
    */
-  
+  /*
   char * strtokIndx; // this is used by strtok() as an index
   char CommandArray[64];
 
@@ -421,4 +421,4 @@ void parseCommand(String commandToParse) {
     SerialUSB.print("Setting Server BW to: "); SerialUSB.println(int1);
     rf95.setSignalBandwidth(int1);
   }
-}
+}*/

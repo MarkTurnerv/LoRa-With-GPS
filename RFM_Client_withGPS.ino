@@ -179,7 +179,7 @@ void loop()
   
   else {
     //checkCmd();
-    if (millis()-GPSreceivingTimeout > 30000) {    //if GPS reciever has not sent any updates over LoRa in 30 seconds
+    if (millis()-GPSreceivingTimeout > 30000) {    //if GPS reciever has not sent any updates in 30 seconds
       updateMode();
       timeout = millis();
       GPSreceivingTimeout = millis();
@@ -288,7 +288,7 @@ void sendGPS(){ //Send GPS packet over LoRa
 void getLoRaReply(){  //Get reply from LoRa server
   byte buf[RH_RF95_MAX_MESSAGE_LEN];
   byte len = sizeof(buf);
-  if (rf95.waitAvailableTimeout(10000)) {
+  if (rf95.waitAvailableTimeout(20000)) {
     if (rf95.recv(buf, &len)) {
       SerialUSB.print("Got reply: ");
       SerialUSB.println((char*)buf);
