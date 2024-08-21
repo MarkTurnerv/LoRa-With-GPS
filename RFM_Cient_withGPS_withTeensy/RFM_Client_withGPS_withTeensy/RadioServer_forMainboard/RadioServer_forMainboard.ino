@@ -34,13 +34,14 @@ void setup()
 {
   SerialUSB.begin(9600);
   SerialUSB.println("Serial initialized");
+  
   SPI1.setCS(38);
   SPI1.setMISO(39);
   //SPI1.setMOSI(26);
   //SPI1.setSCK(27);
   SPI1.begin();
   pinMode(pinLORA_RST,OUTPUT);
-  digitalWrite(pinLORA_RST,HIGH);
+  //digitalWrite(pinLORA_RST,HIGH);
   SerialUSB.println("pin set");
 
   //Manual reset radio
@@ -92,7 +93,7 @@ void setup()
 
 void loop()
 {
-  checkSafeMode();
+  //checkSafeMode();
   checkForCmd();
   if (rf95.available()){
     // Should be a message for us now
@@ -111,6 +112,7 @@ void loop()
       //SerialUSB.println();
 
       // Send a reply
+      /*
       String BUF = (char*)buf;
       if (BUF.startsWith("Waiting for GPS")) {
         uint8_t toSend[] = "Ack Waiting for GPS";
@@ -136,8 +138,8 @@ void loop()
         digitalWrite(LED_BUILTIN, LOW); //Turn off status LED
         memset(toSend, 0, sizeof(toSend));
       }
-
-      updateMode(); //switch between the 3 transmission modes after each successful reception and ack
+      */
+      //updateMode(); //switch between the 3 transmission modes after each successful reception and ack
     }
     else 
       SerialUSB.println("Receive failed");
@@ -151,7 +153,7 @@ void loop()
 
 bool receiveLoRa(){
   bool received = 0;
-  if (rf95.waitAvailableTimeout(2000)) {
+  if (rf95.waitAvailableTimeout(20000)) {
     // Should be a reply message for us now
     uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
     uint8_t len = sizeof(buf);
@@ -253,6 +255,7 @@ void checkForCmd() {  //check serialUSB for user commands
 void parseCommand(String commandToParse) {
   /* This is where all the commands are interpreted and is the meat of the control system
    * so far
+   * #listCmd - list the available commands to the serial monitor
    * #header - print a header to the terminal
    * #safeTrans - enter safeTransmission mode
    * #HDR - enter HighDataRate
@@ -265,6 +268,11 @@ void parseCommand(String commandToParse) {
                   if client changes to a known bandwidth)
    * #RS41On - Turn RS41 power on
    * #RS41Off - Turn RS41 power off
+   * #enable12V - turn on 12V converter on ECU
+   * #disable12V - turn off 12V converter on ECU
+   * #enableHeater - turn on heater on ECU
+   * #disableHeater - turn off heater on ECU
+   * #boardMon - get the board monitoring of the ECU: 5V, 12V_I, 12V, PCB_THERM, Zephr_V
    */
   
   char * strtokIndx; // this is used by strtok() as an index
@@ -272,7 +280,27 @@ void parseCommand(String commandToParse) {
 
   int int1 = 0;
   bool received = 0;
-
+  if(commandToParse.startsWith("#listCmd"))
+  {
+    String cmdList = "    #listCmd - list the available commands to the serial monitor\n";
+    cmdList += "    #header - print a header to the terminal\n";
+    cmdList += "    #safeTrans - enter safeTransmission mode\n";
+    cmdList += "    #HDR - enter HighDataRate\n";
+    cmdList += "    #sleep  - puts LoRa radio client and server to sleep\n";
+    cmdList += "    #setBW,[int] - Sets LoRa client and server bandwidth\n";
+    cmdList += "    #setSF,[int] - Sets LoRa client and server spreading factor\n";
+    cmdList += "    #setCR,[int] - Sets LoRa client and server coding ratio\n";
+    cmdList += "    #send - send all characters entered into the Serial Monitor port\n";
+    cmdList += "    #setSerBW - sets the bandwidth of just the server side\n";
+    cmdList += "    #RS41On - Turn RS41 power on\n";
+    cmdList += "    #RS41Off - Turn RS41 power off\n";
+    cmdList += "    #enable12V - turn on 12V converter on ECU\n";
+    cmdList += "    #disable12V - turn off 12V converter on ECU\n";
+    cmdList += "    #enableHeater - turn on heater on ECU\n";
+    cmdList += "    #disableHeater - turn off heater on ECU\n";
+    cmdList += "    #boardMon - get the board monitoring of the ECU: 5V, 12V_I, 12V, PCB_THERM, Zephr_V";
+     SerialUSB.println(cmdList);  
+  }
   if(commandToParse.startsWith("#header"))
   {
      SerialUSB.println(header);  
@@ -413,6 +441,22 @@ void parseCommand(String commandToParse) {
   }
   else if (commandToParse.startsWith("#disable12V")){
     uint8_t toSend[] = "Cmd: disable12V";
+    rf95.send(toSend, sizeof(toSend)+1);
+    rf95.waitPacketSent();
+    memset(toSend, 0, sizeof(toSend));
+    commandToParse = "";
+    received = receiveLoRa();
+  }
+  else if (commandToParse.startsWith("#enableHeater")){
+    uint8_t toSend[] = "Cmd: enableHeater";
+    rf95.send(toSend, sizeof(toSend)+1);
+    rf95.waitPacketSent();
+    memset(toSend, 0, sizeof(toSend));
+    commandToParse = "";
+    received = receiveLoRa();
+  }
+  else if (commandToParse.startsWith("#disableHeater")){
+    uint8_t toSend[] = "Cmd: disableHeater";
     rf95.send(toSend, sizeof(toSend)+1);
     rf95.waitPacketSent();
     memset(toSend, 0, sizeof(toSend));

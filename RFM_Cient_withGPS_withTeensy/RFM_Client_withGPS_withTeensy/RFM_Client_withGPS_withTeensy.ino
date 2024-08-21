@@ -38,12 +38,13 @@ int pinLoRaCIPO = 12; //Controller out Peripheral in (formerly MISO)
 int pinLoRaINT = 14;// 18 for EFU, 14 for ECU
 int pinRS41_ENABLE = 36;
 int pinDS = 22; //temperature sensor
-int pin5V_MON = 2;  //I don't think these pins will work because they're digital
+int pin5V_MON = 26;//2;
 int pin12V_IMON = 6;
-int pin12V_MON = 7;
+int pin12V_MON = 27;//7;
 int pin12V_ENABLE = 5;
 int pinPCB_THERM = 22;
 int pinV_ZYPHR_VMON = 40;
+int pinHeater_DISABLE = 4;
 
 RH_RF95 rf95(pinLoRaCS, pinLoRaINT);  //instance of radio module
 DS18B20 ds(pinDS);  //instance of temperature sensor
@@ -88,6 +89,8 @@ void setup()
   pinMode(pinPCB_THERM,INPUT);
   pinMode(pinV_ZYPHR_VMON,INPUT);
   pinMode(pin12V_ENABLE,OUTPUT);
+  pinMode(pinHeater_DISABLE,OUTPUT);
+  digitalWrite(pinHeater_DISABLE,LOW);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN,HIGH);
   delay(500);
@@ -175,7 +178,7 @@ void loop()
         satCntUpd = 1;
       }
       if(locUpd && altUpd){ //Send GPS data when location and altitude are both updated
-        updateMode(); //switch transmission modes
+        //updateMode(); //switch transmission modes
         locUpd = 0;
         altUpd = 0;
         satCntUpd = 0;
@@ -189,7 +192,8 @@ void loop()
           //commented out waiting for reply so the transmitter continuously sends GPS data regardless of whether it is recieved
         setMaxReceiveTime();
         // Now wait for a reply
-        getLoRaReply(maxReceiveTime);
+        //getLoRaReply(maxReceiveTime);
+        checkCmd();
       }
       else {
         checkPartialGPSUpdate();
@@ -282,7 +286,7 @@ void checkRS41(){
   
   sensor_data = rs41.decoded_sensor_data(false);
   if (sensor_data.valid) {
-    updateMode();
+    //updateMode();
     sendRS41();
     timeout = millis();
   } else {
@@ -332,6 +336,10 @@ void getLoRaReply(int maxReceiveTime){  //Get reply from LoRa server
       SDcard.print(" RSSI:");
       SerialUSB.println(rf95.lastRssi(), DEC);
       SDcard.println(rf95.lastRssi(), DEC);
+      String BUF = (char*)buf;
+      if (BUF.startsWith("Cmd")){
+        cmdParse(BUF);
+      }
     }
     else {
       SerialUSB.println("Receive failed");
@@ -358,7 +366,7 @@ void setMaxReceiveTime(){
 
 void GPSTimeout(){
   if (millis()-GPSreceivingTimeout > 8000) {    //if GPS reciever has not sent any updates over LoRa in 30 seconds
-    updateMode();
+    //updateMode();
     timeout = millis();
     GPSreceivingTimeout = millis();
     SerialUSB.print("Sending wait message: ");
@@ -366,7 +374,8 @@ void GPSTimeout(){
     rf95.send(waitMessageSend, sizeof(waitMessageSend));
     rf95.waitPacketSent();
     setMaxReceiveTime();
-    getLoRaReply(maxReceiveTime);
+    //getLoRaReply(maxReceiveTime);
+    checkCmd();
   }
 }
 
@@ -419,18 +428,16 @@ void updateMode(){  //switch between each of the three modes after every transmi
 void boardMon() {
   String outputString = "5V:";
   float bin = analogRead(pin5V_MON);
-  float calc = (bin/1024.0) * 4;
-  //outputString += calc;
-  outputString += bin;
+  float calc = (bin/1024.0) * 4 * 3.293;  //3.475 in testing
+  outputString += calc;
   outputString += ", ";
   outputString += "12V_I:";
   outputString += analogRead(pin12V_IMON);
   outputString += ", ";
   outputString += "12V:";
   bin =  analogRead(pin12V_MON);
-  calc = (bin / 1024.0) * 4.87;
-  //outputString += calc;
-  outputString += bin;
+  calc = (bin / 1024.0) * 4.87 * 3.293; //3.854 in testing
+  outputString += calc;
   outputString += ", ";
   outputString += "PCB_THERM (C):";
   outputString += ds.getTempC();
@@ -441,6 +448,7 @@ void boardMon() {
   outputString += calc;
   char boardMonMes[100];
   outputString.toCharArray(boardMonMes, 100);
+  SerialUSB.println((char*)boardMonMes);
   rf95.send((uint8_t *)boardMonMes, sizeof(boardMonMes));
   rf95.waitPacketSent();
   Serial.println(outputString);
@@ -454,14 +462,12 @@ void boardMon() {
 }
 
 void checkCmd(){  //check if client has recieved any user commands from server
-  SerialUSB.println("checking for Cmd");
+  //SerialUSB.println("checking for Cmd");
   if (rf95.waitAvailableTimeout(2000)) {
-    SerialUSB.println("checking for Cmd x2");
     // Should be a reply message for us now
     if (rf95.recv(buf, &len)) {
       String BUF = (char*)buf;
       SerialUSB.println((char*)buf);
-      SerialUSB.println(BUF);
       if (BUF.startsWith("Cmd")){
         cmdParse(BUF);
       }
@@ -555,19 +561,31 @@ void cmdParse(String BUF){  //interpret the user command
     rf95.send(toSend, sizeof(toSend)+1);
     rf95.waitPacketSent();
   }
-  if(BUF.startsWith("#Cmd: enable12V")) {
+  if(BUF.startsWith("Cmd: enable12V")) {
     digitalWrite(pin12V_ENABLE,LOW);  //prototype ECU board has 12V active low
-    uint8_t toSend[] = "12V powered off";
-    rf95.send(toSend, sizeof(toSend)+1);
-    rf95.waitPacketSent();
-  }
-  if(BUF.startsWith("#Cmd: disable12V")) {
-    digitalWrite(pin12V_ENABLE,HIGH);
     uint8_t toSend[] = "12V powered on";
     rf95.send(toSend, sizeof(toSend)+1);
     rf95.waitPacketSent();
   }
-  if(BUF.startsWith("#Cmd: boardMon")) {
+  if(BUF.startsWith("Cmd: disable12V")) {
+    digitalWrite(pin12V_ENABLE,HIGH);
+    uint8_t toSend[] = "12V powered off";
+    rf95.send(toSend, sizeof(toSend)+1);
+    rf95.waitPacketSent();
+  }
+  if(BUF.startsWith("Cmd: enableHeater")) {
+    digitalWrite(pinHeater_DISABLE,LOW);
+    uint8_t toSend[] = "Heater on";
+    rf95.send(toSend, sizeof(toSend)+1);
+    rf95.waitPacketSent();
+  }
+  if(BUF.startsWith("Cmd: disableHeater")) {
+    digitalWrite(pinHeater_DISABLE,HIGH);
+    uint8_t toSend[] = "Heater off";
+    rf95.send(toSend, sizeof(toSend)+1);
+    rf95.waitPacketSent();
+  }
+  if(BUF.startsWith("Cmd: boardMon")) {
     boardMon();
   }
 }
