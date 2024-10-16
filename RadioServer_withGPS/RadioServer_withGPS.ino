@@ -20,7 +20,7 @@ long timeSinceLastPacket = 0; //Tracks the time stamp of last packet received
 //float frequency = 864.1;
 float frequency = 921.2;
 int safeMode = 1;
-char header[] = "Date, Time, SatelliteCount, Latitude, Longitude, Speed (kmph), Altitude (m), SNR, RSSI";
+char header[] = "Date, Time, SatelliteCount, Latitude, Longitude, Speed (kmph), Altitude (m), SNR, RSSI, millis";
 String DEBUG_Buff;  //buffer for the USB Serial monitor
 int safeModeTimer = 0;
 int safeModeTimeout = 0;  //Used to track whether tranceiver has entered safemode because of timeout
@@ -76,7 +76,8 @@ void loop()
       //SerialUSB.print("Received message: ");
       SerialUSB.print((char*)buf); SerialUSB.print(" SNR:");
       SerialUSB.print(rf95.lastSNR());
-      SerialUSB.print(" RSSI:"); SerialUSB.println(rf95.lastRssi());
+      SerialUSB.print(" RSSI:"); SerialUSB.print(rf95.lastRssi());
+      SerialUSB.print(" millis:"); SerialUSB.println(millis());
       //SerialUSB.print(" RSSI: ");
       //SerialUSB.print(rf95.lastRssi(), DEC);
       //SerialUSB.println();

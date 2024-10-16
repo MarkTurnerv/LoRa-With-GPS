@@ -179,7 +179,7 @@ void loop()
   
   else {
     //checkCmd();
-    if (millis()-GPSreceivingTimeout > 30000) {    //if GPS reciever has not sent any updates in 30 seconds
+    if (millis()-GPSreceivingTimeout > 3000) {    //if GPS reciever has not sent any updates in 30 seconds
       updateMode();
       timeout = millis();
       GPSreceivingTimeout = millis();
