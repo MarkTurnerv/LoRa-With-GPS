@@ -13,8 +13,7 @@ https://github.com/PaulStoffregen/RadioHead/tree/master/examples/rf95
 RadioHead refrence: https://www.airspayce.com/mikem/arduino/RadioHead/classRHGenericDriver.html#a9269fb2eddfaa055c31769619d808dbe
 
 To do:
-  need to change definition of RS41_GPIO_PWR_PIN from 32 -> 36 (in RS41.h)?
-  for longduration flight: millis will overflow after 50 days and reset; shouldn't cause problem
+  Command to turn on/off RS41
 */
 
 #include <SPI.h>  //Serial Peripheral interface, used by LoRa
