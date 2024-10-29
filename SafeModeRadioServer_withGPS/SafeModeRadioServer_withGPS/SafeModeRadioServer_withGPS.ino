@@ -22,7 +22,7 @@ int safeModeTimeout = 0;  //Used to track whether tranceiver has entered safemod
 
 void setup()
 {
-  safeTransmission(); //initialize server to safeTransmission mode
+  longRange(); //initialize server to safeTransmission mode
   pinMode(LED, OUTPUT);
 
   SerialUSB.begin(9600);
@@ -50,7 +50,7 @@ void setup()
  // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then 
  // you can set transmitter powers from 5 to 23 dBm:
   rf95.setTxPower(21, false);
-  safeTransmission();
+  longRange();
 }
 
 void loop()

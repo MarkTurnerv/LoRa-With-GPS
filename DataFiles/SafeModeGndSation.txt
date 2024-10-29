@@ -1,0 +1,178 @@
+Date Time SatCount Latitude Longitude Speed Altitude SNR RSSI millis
+Waiting for GPS 13 -65 160279
+Ack Waiting for GPS 14 -41 160567
+Data Recieved 13 -52 160817
+Waiting for GPS 11 -61 169388
+Waiting for GPS 10 -61 214719
+Ack Waiting for GPS 13 -41 215008
+Data Recieved 13 -52 215258
+Waiting for GPS 11 -59 223841
+Waiting for GPS 13 -66 269243
+Ack Waiting for GPS 13 -41 269531
+Data Recieved 13 -51 269782
+Waiting for GPS 14 -64 278378
+Waiting for GPS 11 -67 323831
+Ack Waiting for GPS 13 -41 324121
+Data Recieved 13 -52 324371
+Waiting for GPS 13 -64 332977
+Waiting for GPS 13 -65 378472
+Ack Waiting for GPS 13 -41 378762
+Data Recieved 13 -52 379013
+Waiting for GPS 13 -54 433157
+Ack Waiting for GPS 13 -41 433447
+Data Recieved 13 -52 433698
+Waiting for GPS 10 -66 442318
+Waiting for GPS 11 -60 487886
+Ack Waiting for GPS 14 -41 488176
+Data Recieved 13 -51 488427
+Waiting for GPS 13 -64 497052
+Waiting for GPS 13 -64 542646
+Ack Waiting for GPS 13 -41 542936
+Data Recieved 13 -52 543187
+Waiting for GPS 13 -63 551818
+Waiting for GPS 12 -68 597433
+Ack Waiting for GPS 13 -41 597724
+Data Recieved 13 -52 597975
+Waiting for GPS 13 -63 606607
+Waiting for GPS 13 -63 652243
+Ack Waiting for GPS 13 -41 652534
+Data Recieved 13 -52 652785
+Waiting for GPS 13 -63 661424
+Waiting for GPS 13 -61 707076
+Ack Waiting for GPS 13 -42 707365
+Data Recieved 13 -52 707618
+Waiting for GPS 13 -64 716258
+Waiting for GPS 13 -74 761921
+Ack Waiting for GPS 13 -60 762212
+Data Recieved 13 -57 762463
+Waiting for GPS 11 -61 771102
+Waiting for GPS 13 -65 816747
+Ack Waiting for GPS 13 -56 817037
+Data Recieved 12 -64 817290
+Waiting for GPS 13 -66 825929
+Waiting for GPS 11 -73 871575
+Ack Waiting for GPS 13 -50 871866
+Data Recieved 13 -58 872117
+Waiting for GPS 13 -64 896890
+10/17/2024 15:40:24 6 40.009292 -105.247423 1.31492 1621.0 11 -73 940116
+Data Recieved 10 -71 940373
+10/17/2024 15:40:32 6 40.009299 -105.247485 3.20396 1618.7 13 -67 948287
+Data Recieved 13 -72 948544
+Waiting for GPS 14 -68 973450
+Waiting for GPS 14 -74 1036484
+Ack Waiting for GPS 12 -64 1036774
+Data Recieved 13 -69 1037026
+Waiting for GPS 9 -72 1062187
+Waiting for GPS 13 -75 1125227
+Ack Waiting for GPS 13 -51 1125518
+Data Recieved 13 -56 1125769
+Waiting for GPS 14 -74 1150935
+Waiting for GPS 10 -72 1213972
+Ack Waiting for GPS 13 -55 1214262
+Data Recieved 13 -63 1214515
+Waiting for GPS 13 -75 1239679
+Waiting for GPS 13 -75 1302712
+Ack Waiting for GPS 13 -61 1303003
+Data Recieved 13 -68 1303254
+Waiting for GPS 13 -72 1328407
+Waiting for GPS 13 -76 1391345
+Ack Waiting for GPS 13 -60 1391637
+Data Recieved 13 -68 1391887
+Waiting for GPS 14 -73 1416979
+Waiting for GPS 12 -77 1479863
+Ack Waiting for GPS 13 -60 1480153
+Data Recieved 13 -68 1480405
+Waiting for GPS 13 -82 1505506
+Waiting for GPS 13 -74 1568401
+Ack Waiting for GPS 13 -49 1568691
+Data Recieved 13 -55 1568942
+Waiting for GPS 13 -74 1594048
+Waiting for GPS 13 -75 1656959
+Ack Waiting for GPS 13 -60 1657249
+Data Recieved 14 -67 1657501
+Waiting for GPS 14 -79 1682615
+Waiting for GPS 11 -77 1745550
+Ack Waiting for GPS 14 -60 1745841
+Data Recieved 13 -67 1746092
+Waiting for GPS 13 -79 1771210
+Waiting for GPS 14 -90 1834158
+Ack Waiting for GPS 13 -60 1834448
+Data Recieved 14 -67 1834700
+Waiting for GPS 11 -87 1859823
+Waiting for GPS 13 -92 1922786
+Ack Waiting for GPS 10 -51 1923077
+Data Recieved 13 -61 1923327
+Waiting for GPS 13 -91 1948456
+Waiting for GPS 13 -92 2011432
+Ack Waiting for GPS 13 -53 2011722
+Data Recieved 10 -59 2011974
+Waiting for GPS 10 -93 2037108
+Waiting for GPS 13 -91 2100090
+Ack Waiting for GPS 13 -49 2100380
+Data Recieved 13 -57 2100632
+Waiting for GPS 8 -91 2125768
+Waiting for GPS 10 -95 2188745
+Ack Waiting for GPS 11 -47 2189035
+Data Recieved 12 -55 2189287
+Waiting for GPS 9 -95 2214422
+Waiting for GPS 12 -92 2277399
+Ack Waiting for GPS 13 -49 2277690
+Data Recieved 13 -57 2277941
+Waiting for GPS 13 -93 2303074
+Waiting for GPS 13 -91 2366060
+Ack Waiting for GPS 14 -47 2366352
+Data Recieved 14 -55 2366602
+Waiting for GPS 13 -90 2391743
+Waiting for GPS 13 -90 2454735
+Ack Waiting for GPS 13 -48 2455025
+Data Recieved 14 -57 2455277
+Waiting for GPS 13 -91 2480413
+Waiting for GPS 13 -89 2543405
+Ack Waiting for GPS 13 -48 2543695
+Data Recieved 13 -56 2543947
+Waiting for GPS 13 -90 2569087
+Waiting for GPS 13 -90 2632090
+Ack Waiting for GPS 13 -48 2632381
+Data Recieved 13 -55 2632633
+Waiting for GPS 13 -90 2657779
+Waiting for GPS 13 -91 2720788
+Ack Waiting for GPS 13 -48 2721080
+Data Recieved 14 -56 2721331
+Waiting for GPS 13 -90 2746480
+Waiting for GPS 12 -91 2809490
+Ack Waiting for GPS 13 -48 2809782
+Data Recieved 13 -56 2810032
+Waiting for GPS 13 -89 2835180
+Waiting for GPS 13 -92 2898189
+Ack Waiting for GPS 9 -45 2898479
+Data Recieved 10 -54 2898731
+Waiting for GPS 12 -93 2923880
+Waiting for GPS 10 -95 2986887
+Ack Waiting for GPS 13 -50 2987177
+Data Recieved 13 -58 2987429
+Waiting for GPS 11 -75 3012573
+Waiting for GPS 4 -104 3075583
+Ack Waiting for GPS 13 -50 3075874
+Data Recieved 13 -58 3076125
+10/17/2024 16:15:25 12 40.010339 -105.247343 8.64884 1774.5 5 -111 3083269
+Data Recieved 13 -58 3083526
+10/17/2024 16:15:33 12 40.010399 -105.247283 5.18560 1798.6 8 -105 3091425
+Data Recieved 13 -57 3091681
+Waiting for GPS 6 -111 3116591
+Waiting for GPS 4 -114 3179608
+Ack Waiting for GPS 14 -48 3179898
+Data Recieved 13 -57 3180150
+Waiting for GPS -1 -118 3313469
+Waiting for GPS 0 -113 3376422
+Waiting for GPS 4 -115 3439312
+Waiting for GPS -7 -124 3502112
+Waiting for GPS -7 -126 3564822
+Waiting for GPS -4 -120 3690177
+Waiting for GPS -4 -125 3752884
+Waiting for GPS -11 -131 4067195
+Waiting for GPS -12 -128 4130155
+Waiting for GPS -12 -134 4193120
+Waiting for GPS -11 -133 4256083
+Waiting for GPS -13 -136 4508018
+Waiting for GPS -12 -130 4571006
+Waiting for GPS -14 -133 4823326

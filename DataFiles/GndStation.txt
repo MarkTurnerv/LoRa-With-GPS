@@ -1,0 +1,331 @@
+Date Time SatCount Latitude Longitude Speed Altitude SNR RSSI millis
+Waiting for GPS 13 -92 127772
+Long Range Mode
+Waiting for GPS 11 -96 132077
+High Data Mode
+Waiting for GPS 8 -93 178397
+Safe Transmission Mode
+Waiting for GPS 14 -85 181624
+Long Range Mode
+Waiting for GPS 10 -86 185928
+High Data Mode
+Waiting for GPS 10 -84 232254
+Safe Transmission Mode
+Waiting for GPS 13 -92 235480
+Long Range Mode
+Waiting for GPS 11 -91 239787
+High Data Mode
+Waiting for GPS 9 -91 286109
+Safe Transmission Mode
+Waiting for GPS 14 -86 289336
+Long Range Mode
+Waiting for GPS 12 -89 293642
+High Data Mode
+Waiting for GPS 9 -90 339963
+Safe Transmission Mode
+Waiting for GPS 14 -87 343191
+Long Range Mode
+Waiting for GPS 11 -91 347496
+High Data Mode
+Waiting for GPS 9 -87 393812
+Safe Transmission Mode
+Waiting for GPS 14 -81 397038
+Long Range Mode
+Waiting for GPS 11 -95 401344
+High Data Mode
+Waiting for GPS 10 -82 447667
+Safe Transmission Mode
+Waiting for GPS 14 -87 450893
+Long Range Mode
+Waiting for GPS 11 -87 455198
+High Data Mode
+Waiting for GPS 9 -89 501519
+Safe Transmission Mode
+Waiting for GPS 11 -89 504745
+Long Range Mode
+Waiting for GPS 11 -87 509050
+High Data Mode
+Waiting for GPS 9 -92 555366
+Safe Transmission Mode
+Waiting for GPS 13 -92 558593
+Long Range Mode
+Waiting for GPS 13 -96 562897
+High Data Mode
+Waiting for GPS 9 -93 609217
+Safe Transmission Mode
+Waiting for GPS 8 -101 612443
+Long Range Mode
+Waiting for GPS 6 -97 616748
+High Data Mode
+Waiting for GPS 7 -104 663069
+Safe Transmission Mode
+Waiting for GPS 12 -90 666295
+Long Range Mode
+Waiting for GPS 10 -98 670600
+High Data Mode
+Waiting for GPS 7 -107 716922
+Safe Transmission Mode
+Waiting for GPS 11 -91 720149
+Long Range Mode
+Waiting for GPS 11 -91 724454
+High Data Mode
+Waiting for GPS 9 -87 770780
+Safe Transmission Mode
+Waiting for GPS 12 -99 774006
+Long Range Mode
+Waiting for GPS 12 -97 778312
+High Data Mode
+Waiting for GPS 10 -85 824633
+Safe Transmission Mode
+Waiting for GPS 10 -89 827860
+Long Range Mode
+Waiting for GPS 11 -92 832164
+High Data Mode
+Waiting for GPS 8 -102 894329
+Safe Transmission Mode
+10/17/2024 15:40:24 6 40.009292 -105.247423 1.31492 1621.0 11 -92 895164
+Long Range Mode
+10/17/2024 15:40:26 6 40.009300 -105.247428 2.20388 1620.1 12 -106 900603
+High Data Mode
+Waiting for GPS 8 -102 901769
+Safe Transmission Mode
+10/17/2024 15:40:32 6 40.009299 -105.247485 3.20396 1618.7 11 -104 903186
+Long Range Mode
+10/17/2024 15:40:33 6 40.009295 -105.247484 1.70384 1618.5 9 -99 907603
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 14 -92 989778
+Long Range Mode
+10/17/2024 15:42:00 8 40.009303 -105.247483 0.03704 1633.3 9 -89 994724
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 13 -93 1076894
+Long Range Mode
+10/17/2024 15:43:27 8 40.009244 -105.247475 0.05556 1642.4 13 -90 1081844
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 12 -103 1164014
+Long Range Mode
+10/17/2024 15:44:54 8 40.009317 -105.247488 0.01852 1631.6 11 -108 1168962
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 9 -105 1251130
+Long Range Mode
+10/17/2024 15:46:21 8 40.009350 -105.247578 0.11112 1623.8 9 -103 1256070
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 11 -107 1338209
+Long Range Mode
+10/17/2024 15:47:48 8 40.009351 -105.247569 0.03704 1621.3 9 -108 1343144
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 11 -108 1425266
+Long Range Mode
+10/17/2024 15:49:13 8 40.009413 -105.247552 0.37040 1628.4 12 -109 1430208
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 8 -114 1512349
+Long Range Mode
+10/17/2024 15:50:40 10 40.009263 -105.247448 0.01852 1633.1 10 -108 1517290
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 8 -111 1599440
+Long Range Mode
+10/17/2024 15:52:07 10 40.009249 -105.247445 0.05556 1630.7 9 -111 1604383
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 11 -111 1686538
+Long Range Mode
+10/17/2024 15:53:34 10 40.009313 -105.247519 0.14816 1621.0 10 -109 1691477
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS -12 -136 1773624
+Long Range Mode
+10/17/2024 15:55:01 11 40.009786 -105.247601 0.01852 1608.3 -7 -133 1778565
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS -9 -133 1860721
+Long Range Mode
+10/17/2024 15:56:28 11 40.009779 -105.247603 0.03704 1609.8 -2 -127 1865662
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 2 -118 1947820
+Long Range Mode
+10/17/2024 15:57:55 11 40.009785 -105.247607 0.03704 1609.4 7 -119 1952760
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 2 -119 2034914
+Long Range Mode
+10/17/2024 15:59:22 11 40.009780 -105.247612 0.05556 1610.4 5 -118 2039855
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 0 -120 2122018
+Long Range Mode
+10/17/2024 16:00:49 11 40.009785 -105.247603 0.07408 1610.0 4 -120 2126964
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS -1 -123 2209133
+Long Range Mode
+10/17/2024 16:02:16 11 40.009782 -105.247605 0.14816 1610.1 2 -121 2214072
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 1 -119 2296243
+Long Range Mode
+10/17/2024 16:03:43 11 40.009784 -105.247605 0.05556 1609.2 5 -120 2301188
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 1 -119 2383359
+Long Range Mode
+10/17/2024 16:05:10 11 40.009782 -105.247615 0.01852 1609.7 3 -119 2388298
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 1 -118 2470469
+Long Range Mode
+10/17/2024 16:06:37 11 40.009782 -105.247613 0.01852 1609.6 5 -119 2475407
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 1 -118 2557582
+Long Range Mode
+10/17/2024 16:08:04 11 40.009784 -105.247611 0.01852 1608.8 4 -119 2562524
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 1 -119 2644696
+Long Range Mode
+10/17/2024 16:09:31 11 40.009781 -105.247613 0.01852 1610.5 4 -119 2649640
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 0 -119 2731815
+Long Range Mode
+10/17/2024 16:10:58 11 40.009779 -105.247610 0.01852 1610.4 4 -120 2736759
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 0 -119 2818939
+Long Range Mode
+10/17/2024 16:12:25 11 40.009781 -105.247608 0.03704 1609.2 3 -121 2823882
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 0 -119 2906068
+Long Range Mode
+10/17/2024 16:13:52 11 40.009779 -105.247608 0.01852 1609.7 0 -122 2911010
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS 3 -117 2993192
+Long Range Mode
+10/17/2024 16:15:19 12 40.010307 -105.247349 3.68548 1757.7 1 -121 2998157
+High Data Mode
+Waiting for GPS 0 -115 2999322
+Safe Transmission Mode
+10/17/2024 16:15:25 12 40.010339 -105.247343 8.64884 1774.5 2 -118 3000740
+Long Range Mode
+10/17/2024 16:15:27 12 40.010376 -105.247345 7.90804 1780.6 7 -118 3006166
+High Data Mode
+Waiting for GPS -1 -119 3007331
+Safe Transmission Mode
+10/17/2024 16:15:33 12 40.010399 -105.247283 5.18560 1798.6 -4 -127 3008750
+Long Range Mode
+10/17/2024 16:15:34 12 40.010405 -105.247289 6.46348 1801.4 7 -118 3013178
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Waiting for GPS -5 -129 3095367
+Long Range Mode
+Waiting for GPS -4 -130 3142181
+High Data Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Timeout entering Long Range
+Long Range Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Timeout entering Long Range
+Long Range Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Timeout entering Long Range
+Long Range Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Timeout entering Long Range
+Long Range Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Timeout entering Long Range
+Long Range Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Timeout entering Long Range
+Long Range Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Timeout entering Long Range
+Long Range Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Timeout entering Long Range
+Long Range Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Timeout entering Long Range
+Long Range Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Timeout entering Long Range
+Long Range Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Timeout entering Long Range
+Long Range Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Timeout entering Long Range
+Long Range Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Timeout entering Long Range
+Long Range Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Timeout entering Long Range
+Long Range Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Timeout entering Long Range
+Long Range Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Timeout entering Long Range
+Long Range Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Timeout entering Long Range
+Long Range Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
+Timeout entering Long Range
+Long Range Mode
+Timeout entering Safe Transmission
+Safe Transmission Mode
