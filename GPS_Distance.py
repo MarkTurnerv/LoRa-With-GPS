@@ -1,9 +1,11 @@
-from geopy.distance import lonlat, distance
+from geopy import distance
 import pandas as pd
 import os
+import math
+from datetime import datetime
 
 
-GS1 = (40.00928583498405, -105.24752868245703)
+GS1 = (40.00922334747612, -105.24741780408537)
 alt1 = 1610
 GS2 = (40.01198359443059, -105.24527336787577)
 
@@ -13,16 +15,28 @@ results_dir = os.path.join(script_dir, 'DataFiles/')    #Make directory named 'D
 filename = 'GndStation.txt'
 balloonAllData = pd.read_table(os.path.join(results_dir,filename), sep = ' ', index_col = 'Time') #, skiprows = rowsToSkip
 
-balloonGPSData = pd.read_table(os.path.join(results_dir,filename), sep = ' ', index_col = 'Time').dropna()
+balloonEngData = pd.read_table(os.path.join(results_dir,filename), sep = ' ', index_col = 'Time').dropna()
+
+balloonEngData["SatCount"] = pd.to_numeric(balloonEngData["SatCount"])
+balloonEngData["Latitude"] = pd.to_numeric(balloonEngData["Latitude"])
+dataType = balloonEngData.dtypes
+deltaData = balloonEngData[["Latitude","Longitude",'Speed','Altitude','SNR',"RSSI","millis"]].diff()
+balloonGPSData = balloonEngData[["Latitude","Longitude"]]
+
+dataLength = len(balloonEngData)
+i = 0
+flatDist = []
+for i in range(dataLength):
+    flatDist.append(distance.distance(GS1,balloonGPSData.iloc[i]).m)
 
 
-balloonGPSData["Latitude"] = pd.to_numeric(balloonGPSData["Latitude"])
-dataType = balloonGPSData.dtypes
-deltaData = balloonGPSData[["Latitude","Longitude",'Speed','Altitude','SNR',"RSSI","millis"]].diff()
-#deltaData = deltaData.reset_index(drop=True)
-#deltaData = deltaData.diff()
+height = balloonEngData["Altitude"] - alt1  #[m]
 
+tmDist = []  #[m]
+for i in range(dataLength):
+    tmDist.append(math.sqrt((flatDist[i]**2)+(height[i]**2)))
 
-
-
-var = 12
+seconds = balloonEngData['millis'] / 1000
+difSec = seconds.diff()
+speed = tmDist / difSec   #m/s
+#var = 12
